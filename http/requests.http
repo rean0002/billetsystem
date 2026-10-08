@@ -1,0 +1,39 @@
+### 1. Hent de billettyper, der kan købes lige nu
+GET http://localhost:8081/api/ticket-types/current
+
+### 2. Opret en bestilling (ret ticketTypeId til et id fra svaret ovenfor)
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "contactName": "Test Testesen",
+  "email": "test@example.com",
+  "phone": "12345678",
+  "participants": [
+    { "fullName": "Anna Andersen", "ticketTypeId": 2 },
+    { "fullName": "Bente Berg", "ticketTypeId": 2 }
+  ]
+}
+
+### 3. Fejltest: mangler e-mail og deltagernavn (skal give 400)
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "contactName": "Test Testesen",
+  "participants": [
+    { "fullName": "", "ticketTypeId": 2 }
+  ]
+}
+
+### 4. Fejltest: early bird er udløbet (skal give 400)
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "contactName": "Test Testesen",
+  "email": "test@example.com",
+  "participants": [
+    { "fullName": "Anna Andersen", "ticketTypeId": 1 }
+  ]
+}
