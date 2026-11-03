@@ -6,6 +6,7 @@
     <title>Bestil billetter</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- defer: scriptet køres først, når hele siden er indlæst -->
+    <script src="js/betalingsinfo.js" defer></script>
     <script src="js/bestilling.js" defer></script>
 </head>
 <body>
@@ -14,6 +15,7 @@
     <header class="page-header">
         <p class="eyebrow">Billetbestilling</p>
         <h1 id="event-name">Hobbymessen</h1>
+        <p id="event-dates" class="hint"></p>
     </header>
 
     <!-- Vises, mens billettyperne hentes -->
@@ -28,8 +30,15 @@
     <!-- Selve bestillingen -->
     <form id="order-form" hidden>
 
+        <!-- Vises kun, når flere events har billetter til salg på samme tid -->
+        <section id="event-section" class="card" hidden>
+            <h2>Vælg event</h2>
+            <div id="event-choices" class="event-choices" role="radiogroup" aria-label="Event"></div>
+        </section>
+
         <section class="card">
             <h2>Billetpriser</h2>
+            <p id="seats-left" class="seats-left" hidden></p>
             <ul id="price-list" class="price-list"></ul>
         </section>
 
@@ -90,7 +99,10 @@
         <p>Beløb: <strong id="confirm-total"></strong></p>
         <p>Deltagere:</p>
         <ul id="confirm-names"></ul>
-        <p class="hint">Din bestilling er registreret, men endnu ikke betalt. Du får besked om betaling.</p>
+        <!-- Betalingsinfo (konto, reference, frist) indsættes af betalingsinfo.js -->
+        <div id="confirm-payment"></div>
+        <p class="hint" id="confirm-no-payment" hidden>Din bestilling er registreret, men endnu ikke betalt. Du får besked om betaling.</p>
+        <p class="hint">Gem eller tag et billede af denne side, så du har oplysningerne.</p>
     </section>
 
     <!-- Skabelon til én deltager. JavaScript kopierer den, hver gang man trykker "Tilføj deltager". -->

@@ -2,9 +2,11 @@ package dk.billetsystem.service;
 
 import dk.billetsystem.dto.OrderRequest;
 import dk.billetsystem.model.CustomerOrder;
+import dk.billetsystem.model.Event;
 import dk.billetsystem.model.Participant;
 import dk.billetsystem.model.TicketType;
 import dk.billetsystem.repository.CustomerOrderRepository;
+import dk.billetsystem.repository.EventRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +21,15 @@ public class OrderService {
 
     private final CustomerOrderRepository orderRepository;
     private final TicketService ticketService;
+    private final EventService eventService;
+    private final EventRepository eventRepository;
 
-    public OrderService(CustomerOrderRepository orderRepository, TicketService ticketService) {
+    public OrderService(CustomerOrderRepository orderRepository, TicketService ticketService,
+                        EventService eventService, EventRepository eventRepository) {
         this.orderRepository = orderRepository;
         this.ticketService = ticketService;
+        this.eventService = eventService;
+        this.eventRepository = eventRepository;
     }
 
     /**
@@ -56,6 +63,31 @@ public class OrderService {
         }
         order.setTotalOre(total);
 
+        checkOneEventAndCapacity(order);
         return orderRepository.save(order);
+    }
+
+    /**
+     * En bestilling må kun indeholde billetter til ét event, og eventet må ikke blive overbooket.
+     */
+    private void checkOneEventAndCapacity(CustomerOrder order) {
+        long events = order.getParticipants().stream()
+                .map(p -> p.getTicketType().getEvent().getId())
+                .distinct()
+                .count();
+        if (events > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "En bestilling kan kun indeholde billetter til ét event");
+        }
+
+        // Lås eventet, så to samtidige bestillinger ikke kan tage de samme sidste pladser
+        Event event = eventRepository.findByIdForUpdate(order.getEvent().getId()).orElseThrow();
+        Long seatsLeft = eventService.seatsLeft(event);
+        int wanted = order.getParticipants().size();
+        if (seatsLeft != null && wanted > seatsLeft) {
+            String message = seatsLeft == 0
+                    ? event.getName() + " er desværre udsolgt"
+                    : "Der er kun " + seatsLeft + " " + (seatsLeft == 1 ? "plads" : "pladser") + " tilbage til " + event.getName();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
     }
 }

@@ -9,7 +9,9 @@
 
 const MAX_PARTICIPANTS = 20; // samme grænse som @Size(max = 20) i OrderRequest
 
-let ticketTypes = [];   // hentes fra serveren, når siden åbner
+let events = [];        // events med billetter til salg, hver med sine billettyper
+let selectedEvent = null;
+let ticketTypes = [];   // billettyperne for det valgte event
 let nextRowId = 0;      // giver hver deltagerrække et unikt id til <label for="...">
 
 const el = (id) => document.getElementById(id);
@@ -23,10 +25,11 @@ const dateFormat = new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "lo
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+    let allTypes;
     try {
         const response = await fetch("/api/ticket-types/current");
         if (!response.ok) throw new Error("HTTP " + response.status);
-        ticketTypes = await response.json();
+        allTypes = await response.json();
     } catch (err) {
         console.error(err);
         showUnavailable("Vi kan ikke hente billetterne lige nu. Prøv igen om lidt.");
@@ -34,15 +37,23 @@ async function init() {
     }
 
     el("loading").hidden = true;
+    events = groupByEvent(allTypes);
 
-    if (ticketTypes.length === 0) {
+    const available = events.filter((e) => e.seatsLeft !== 0);
+    if (events.length === 0) {
         showUnavailable();
         return;
     }
+    if (available.length === 0) {
+        showUnavailable(events.length === 1
+            ? events[0].name + " er desværre udsolgt."
+            : "Alle events er desværre udsolgt.");
+        return;
+    }
 
-    el("event-name").textContent = ticketTypes[0].eventName;
-    document.title = "Bestil billetter: " + ticketTypes[0].eventName;
-    renderPriceList();
+    // Flere events til salg samtidig: lad kunden vælge. Ellers vælges det ene automatisk.
+    if (events.length > 1) renderEventChoices();
+    selectEvent(available[0].id);
 
     addParticipant();
     el("add-participant").addEventListener("click", () => {
@@ -60,8 +71,83 @@ function showUnavailable(text) {
     el("unavailable").hidden = false;
 }
 
+/** Samler billettyperne under deres event, sorteret efter eventets dato. */
+function groupByEvent(types) {
+    const byId = new Map();
+    for (const t of types) {
+        if (!byId.has(t.eventId)) {
+            byId.set(t.eventId, { id: t.eventId, name: t.eventName, startDate: t.eventStartDate,
+                endDate: t.eventEndDate, seatsLeft: t.eventSeatsLeft, types: [] });
+        }
+        byId.get(t.eventId).types.push(t);
+    }
+    return [...byId.values()].sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+function eventDates(event) {
+    const start = dateFormat.format(new Date(event.startDate));
+    return event.endDate === event.startDate ? start : start + " – " + dateFormat.format(new Date(event.endDate));
+}
+
+function renderEventChoices() {
+    el("event-choices").replaceChildren(...events.map((event) => {
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "event";
+        input.value = event.id;
+        input.disabled = event.seatsLeft === 0;
+        input.addEventListener("change", () => selectEvent(event.id));
+
+        const text = document.createElement("span");
+        const name = document.createElement("strong");
+        name.textContent = event.name;
+        const info = document.createElement("small");
+        info.textContent = eventDates(event) + (event.seatsLeft === 0 ? " · Udsolgt" : "");
+        text.append(name, info);
+
+        const label = document.createElement("label");
+        label.className = "event-choice";
+        label.append(input, text);
+        return label;
+    }));
+    el("event-section").hidden = false;
+}
+
+/** Skifter event: viser eventets priser og giver deltagerne eventets billettyper at vælge imellem. */
+function selectEvent(id) {
+    selectedEvent = events.find((e) => e.id === id);
+    ticketTypes = selectedEvent.types;
+
+    const radio = document.querySelector(`input[name="event"][value="${id}"]`);
+    if (radio) radio.checked = true;
+
+    el("event-name").textContent = selectedEvent.name;
+    el("event-dates").textContent = eventDates(selectedEvent);
+    document.title = "Bestil billetter: " + selectedEvent.name;
+
+    // Vis kun "pladser tilbage", når der er få, så det ikke virker presset hele tiden
+    const seats = el("seats-left");
+    seats.hidden = selectedEvent.seatsLeft == null || selectedEvent.seatsLeft > 20;
+    seats.textContent = `Kun ${selectedEvent.seatsLeft} ${selectedEvent.seatsLeft === 1 ? "plads" : "pladser"} tilbage`;
+
+    renderPriceList();
+    for (const select of document.querySelectorAll(".participant-type")) {
+        fillTypeOptions(select);
+    }
+    // Er der flere deltagere end ledige pladser, fjernes de nederste
+    const rows = el("participants");
+    while (rows.children.length > maxParticipants()) rows.lastElementChild.remove();
+    if (rows.children.length > 0) updateParticipants();
+}
+
+/** Højst 20 pr. bestilling, og aldrig flere end der er ledige pladser. */
+function maxParticipants() {
+    return Math.min(MAX_PARTICIPANTS, selectedEvent?.seatsLeft ?? MAX_PARTICIPANTS);
+}
+
 function renderPriceList() {
     const list = el("price-list");
+    list.replaceChildren();
     for (const type of ticketTypes) {
         const li = document.createElement("li");
 
@@ -99,12 +185,7 @@ function addParticipant() {
     nameLabel.htmlFor = nameInput.id;
     typeLabel.htmlFor = typeSelect.id;
 
-    for (const type of ticketTypes) {
-        const option = document.createElement("option");
-        option.value = type.id;
-        option.textContent = type.name + " – " + formatPrice(type.priceOre);
-        typeSelect.append(option);
-    }
+    fillTypeOptions(typeSelect);
 
     typeSelect.addEventListener("change", updateTotal);
     row.querySelector(".remove-participant").addEventListener("click", () => {
@@ -116,6 +197,17 @@ function addParticipant() {
     updateParticipants();
 }
 
+function fillTypeOptions(select) {
+    const previous = Number(select.value);
+    select.replaceChildren(...ticketTypes.map((type) => {
+        const option = document.createElement("option");
+        option.value = type.id;
+        option.textContent = type.name + " – " + formatPrice(type.priceOre);
+        option.selected = type.id === previous;
+        return option;
+    }));
+}
+
 /** Opdaterer knapper og total, når der er tilføjet eller fjernet en deltager. */
 function updateParticipants() {
     const rows = el("participants").children;
@@ -123,7 +215,7 @@ function updateParticipants() {
     for (const row of rows) {
         row.querySelector(".remove-participant").hidden = rows.length === 1;
     }
-    el("add-participant").disabled = rows.length >= MAX_PARTICIPANTS;
+    el("add-participant").disabled = rows.length >= maxParticipants();
     updateTotal();
 }
 
@@ -197,7 +289,12 @@ function showConfirmation(order) {
         names.append(li);
     }
 
+    // Har arrangørerne udfyldt betalingsoplysninger, vises konto, reference og frist
+    if (order.payment) renderPaymentInfo(el("confirm-payment"), order.payment);
+    else el("confirm-no-payment").hidden = false;
+
     el("order-form").hidden = true;
+    el("seats-left").hidden = true;
     const confirmation = el("confirmation");
     confirmation.hidden = false;
     confirmation.focus();

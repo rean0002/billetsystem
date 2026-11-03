@@ -6,15 +6,19 @@ import dk.billetsystem.model.Participant;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/** Svaret, når en bestilling er oprettet. */
+/**
+ * Svaret, når en bestilling er oprettet. payment er null, hvis arrangørerne ikke har
+ * udfyldt betalingsoplysninger endnu.
+ */
 public record OrderResponse(
         Integer id,
         String status,
         int totalOre,
         List<String> participantNames,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        PaymentInstructions payment
 ) {
-    public static OrderResponse from(CustomerOrder order) {
+    public static OrderResponse from(CustomerOrder order, PaymentInstructions payment) {
         List<String> names = order.getParticipants().stream()
                 .map(Participant::getFullName)
                 .toList();
@@ -23,6 +27,7 @@ public record OrderResponse(
                 order.getStatus().name(),
                 order.getTotalOre(),
                 names,
-                order.getCreatedAt());
+                order.getCreatedAt(),
+                payment);
     }
 }

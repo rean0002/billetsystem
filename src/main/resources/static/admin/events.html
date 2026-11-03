@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Events · Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/admin/admin.js" defer></script>
+    <script src="/admin/events.js" defer></script>
+</head>
+<body class="admin">
+
+<!-- Menuen er ens på alle adminsider -->
+<header class="admin-bar">
+    <div class="admin-bar-inner">
+        <a class="brand" href="/admin/index.html">Billetsystem</a>
+        <nav class="admin-nav" aria-label="Adminmenu">
+            <a href="/admin/index.html">Overblik</a>
+            <a href="/admin/bestillinger.html">Bestillinger</a>
+            <a href="/admin/deltagere.html">Deltagere</a>
+            <a href="/admin/billettyper.html">Billettyper</a>
+            <a href="/admin/events.html">Events</a>
+            <a href="/admin/betaling.html">Betaling</a>
+        </nav>
+        <!-- Alle sider viser tal for det valgte event. Valget huskes i browseren. -->
+        <label class="event-picker">
+            <span>Viser event:</span>
+            <select id="event-select"></select>
+        </label>
+        <!-- Log ud skal være en POST med CSRF-nøgle, ellers kunne en anden side logge dig ud -->
+        <form method="post" action="/admin/logout" class="logout">
+            <span class="whoami" id="whoami"></span>
+            <input type="hidden" id="logout-csrf">
+            <button type="submit" class="link-button">Log ud</button>
+        </form>
+    </div>
+</header>
+
+<main class="page admin-page">
+    <p id="page-error" class="form-error" role="alert" hidden></p>
+
+    <header class="page-header row">
+        <div>
+            <p class="eyebrow">Events</p>
+            <h1>Events</h1>
+            <p class="hint">Hvert event har sine egne billettyper, bestillinger og deltagerliste.</p>
+        </div>
+        <button type="button" class="button primary auto" id="new-event">+ Nyt event</button>
+    </header>
+
+    <section class="card flush">
+        <table class="data-table" id="events-table">
+            <thead>
+            <tr>
+                <th>Event</th><th>Dato</th><th>Status</th><th class="num">Solgt</th><th class="num">Omsætning</th><th></th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <p class="empty" id="events-empty" hidden>Der er ingen events endnu. Opret det første.</p>
+    </section>
+
+    <dialog id="event-dialog" class="dialog" aria-labelledby="event-dialog-title">
+        <form id="event-form" method="dialog" novalidate>
+            <div class="dialog-head">
+                <h2 id="event-dialog-title">Nyt event</h2>
+                <button type="button" class="link-button" id="event-cancel">Annullér</button>
+            </div>
+
+            <div class="field">
+                <label for="event-name-input">Navn</label>
+                <input id="event-name-input" maxlength="100" required placeholder="fx Hobbymesse oktober 2027">
+                <p class="field-error" data-error-for="name"></p>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="event-start">Første dag</label>
+                    <input id="event-start" type="date" required>
+                    <p class="field-error" data-error-for="startDate"></p>
+                </div>
+                <div class="field">
+                    <label for="event-end">Sidste dag</label>
+                    <input id="event-end" type="date" required>
+                    <p class="field-error" data-error-for="endDate"></p>
+                </div>
+            </div>
+            <div class="field">
+                <label for="event-max">Max antal deltagere <span class="optional">(valgfri)</span></label>
+                <input id="event-max" type="number" min="1" step="1" inputmode="numeric" placeholder="Ingen grænse">
+                <p class="field-error" data-error-for="maxParticipants"></p>
+                <p class="hint">Når grænsen er nået, kan der ikke bestilles flere billetter. Afventende bestillinger optager også en plads.</p>
+            </div>
+
+            <p id="event-error" class="form-error" role="alert" hidden></p>
+            <button type="submit" class="button primary" id="event-save">Gem</button>
+        </form>
+    </dialog>
+
+</main>
+</body>
+</html>

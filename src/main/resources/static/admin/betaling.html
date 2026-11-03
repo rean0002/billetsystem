@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Betaling · Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/admin/admin.js" defer></script>
+    <script src="/js/betalingsinfo.js" defer></script>
+    <script src="/admin/betaling.js" defer></script>
+</head>
+<body class="admin">
+
+<!-- Menuen er ens på alle adminsider -->
+<header class="admin-bar">
+    <div class="admin-bar-inner">
+        <a class="brand" href="/admin/index.html">Billetsystem</a>
+        <nav class="admin-nav" aria-label="Adminmenu">
+            <a href="/admin/index.html">Overblik</a>
+            <a href="/admin/bestillinger.html">Bestillinger</a>
+            <a href="/admin/deltagere.html">Deltagere</a>
+            <a href="/admin/billettyper.html">Billettyper</a>
+            <a href="/admin/events.html">Events</a>
+            <a href="/admin/betaling.html">Betaling</a>
+        </nav>
+        <!-- Alle sider viser tal for det valgte event. Valget huskes i browseren. -->
+        <label class="event-picker" hidden>
+            <span>Viser event:</span>
+            <select id="event-select"></select>
+        </label>
+        <!-- Log ud skal være en POST med CSRF-nøgle, ellers kunne en anden side logge dig ud -->
+        <form method="post" action="/admin/logout" class="logout">
+            <span class="whoami" id="whoami"></span>
+            <input type="hidden" id="logout-csrf">
+            <button type="submit" class="link-button">Log ud</button>
+        </form>
+    </div>
+</header>
+
+<main class="page admin-page">
+    <p id="page-error" class="form-error" role="alert" hidden></p>
+
+    <header class="page-header">
+        <p class="eyebrow">Betaling</p>
+        <h1>Betalingsoplysninger</h1>
+        <p class="hint">Kunderne ser oplysningerne, lige når de har bestilt. De gælder alle events.</p>
+    </header>
+
+    <div class="two-col">
+        <form id="payment-form" class="card" novalidate>
+            <h2>Bankoverførsel</h2>
+            <div class="field">
+                <label for="accountHolder">Kontoindehaver <span class="optional">(valgfri)</span></label>
+                <input id="accountHolder" name="accountHolder" maxlength="100" placeholder="fx Hobbyforeningen">
+                <p class="field-error" data-error-for="accountHolder"></p>
+            </div>
+            <div class="field-row narrow-first">
+                <div class="field">
+                    <label for="regNumber">Reg.nr.</label>
+                    <input id="regNumber" name="regNumber" inputmode="numeric" maxlength="4" placeholder="1234">
+                    <p class="field-error" data-error-for="regNumber"></p>
+                </div>
+                <div class="field">
+                    <label for="accountNumber">Kontonummer</label>
+                    <input id="accountNumber" name="accountNumber" inputmode="numeric" maxlength="10" placeholder="0001234567">
+                    <p class="field-error" data-error-for="accountNumber"></p>
+                </div>
+            </div>
+
+            <h2 class="section-title">MobilePay <span class="optional">(valgfri)</span></h2>
+            <div class="field">
+                <label for="mobilepayNumber">MobilePay-nummer</label>
+                <input id="mobilepayNumber" name="mobilepayNumber" maxlength="30" placeholder="fx 12345">
+                <p class="field-error" data-error-for="mobilepayNumber"></p>
+            </div>
+
+            <h2 class="section-title">Frist og besked</h2>
+            <div class="field">
+                <label for="paymentDays">Betalingsfrist (dage efter bestilling)</label>
+                <input id="paymentDays" name="paymentDays" type="number" min="1" max="60" step="1" inputmode="numeric" required>
+                <p class="field-error" data-error-for="paymentDays"></p>
+                <p class="hint">Bestillinger, der ikke er betalt inden fristen, markeres med "Frist overskredet" på adminsiden.</p>
+            </div>
+            <div class="field">
+                <label for="instructions">Ekstra besked til kunden <span class="optional">(valgfri)</span></label>
+                <textarea id="instructions" name="instructions" rows="3" maxlength="1000"
+                          placeholder="fx Billetterne sendes på mail, når betalingen er modtaget."></textarea>
+                <p class="field-error" data-error-for="instructions"></p>
+            </div>
+
+            <p id="payment-error" class="form-error" role="alert" hidden></p>
+            <p id="payment-saved" class="notice-ok card" role="status" hidden>Gemt.</p>
+            <button type="submit" class="button primary" id="payment-save">Gem</button>
+        </form>
+
+        <section class="card preview-card" aria-labelledby="preview-title">
+            <h2 id="preview-title">Sådan ser kunden det</h2>
+            <p class="hint">Eksempel for en bestilling på 590 kr.</p>
+            <div id="preview"></div>
+        </section>
+    </div>
+
+</main>
+</body>
+</html>

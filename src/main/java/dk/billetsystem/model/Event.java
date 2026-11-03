@@ -33,6 +33,17 @@ public class Event {
     protected Event() {
     }
 
+    public Event(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants) {
+        update(name, startDate, endDate, maxParticipants);
+    }
+
+    public void update(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants) {
+        this.name = name;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.maxParticipants = maxParticipants;
+    }
+
     public Integer getId() {
         return id;
     }

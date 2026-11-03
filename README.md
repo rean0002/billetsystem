@@ -2,7 +2,7 @@
 
 Billetbestilling og adminsystem til en hobbymesse, bygget med Java (Spring Boot) og PostgreSQL.
 
-> **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling) og bestillingssiden er på plads. Adminside og betaling er endnu ikke lavet. Se [roadmap](#roadmap).
+> **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling), bestillingssiden og adminsiden (login, overblik, bestillinger, deltagerliste og billettyper) er på plads. Betaling med Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
 >
 > Dette er et hobbyprojekt.
 
@@ -17,7 +17,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 
 | Lag | Valg |
 |---|---|
-| Backend | Java 21, Spring Boot 3.5 (Spring Web, Spring Data JPA, Bean Validation) |
+| Backend | Java 21, Spring Boot 3.5 (Spring Web, Spring Data JPA, Bean Validation, Spring Security) |
 | Database | PostgreSQL |
 | Udviklingsmiljø | Docker Compose |
 | Frontend | HTML, CSS og JavaScript uden framework (serveres af Spring Boot fra `src/main/resources/static`) |
@@ -26,10 +26,18 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 ## Hvad der virker nu
 
 - Bestillingsside på http://localhost:8081, hvor man tilføjer deltagere, vælger billettype, ser totalen og bestiller. Fejl fra serveren vises ved det felt, de hører til
+- **Flere events**, fx en messe hvert halve år. Har flere events billetter til salg samtidig, vælger kunden først event. Hvert event kan have et max antal deltagere. Når det er nået, vises eventet som udsolgt, og serveren afviser flere bestillinger
 - Billettyper med pris og gyldighedsperiode, så fx early bird skifter automatisk til normalpris på en bestemt dato
 - `GET /api/ticket-types/current` viser de billetter, der kan købes lige nu
 - `POST /api/orders` opretter en bestilling med flere deltagere. Prisen beregnes på serveren, og inputtet valideres
 - Samlet fejlformat, så frontenden altid får læselige fejlbeskeder
+- Adminlogin på http://localhost:8081/admin med brugere fra `admin_user` (BCrypt-hashede kodeord). Alt under `/admin` og `/api/admin` kræver login
+- **Overblik:** omsætning (betalt og afventende), solgte billetter, aktivitet de seneste 7 dage, graf over billetter pr. dag, salg pr. billettype og de nyeste bestillinger. En påmindelse viser, hvor mange bestillinger der venter på betaling
+- **Bestillinger:** søg og filtrér på status, se detaljer og skift status (markér som betalt, annullér, refundér, genåbn). Kun lovlige statusskift er mulige. Eksport til CSV
+- **Deltagerliste:** alle deltagere med søgning og filter på billettype, eksport til CSV (åbner direkte i dansk Excel) og en printvenlig tjekind-liste med afkrydsningsfelt til indgangen
+- **Billettyper:** se priser, perioder og salg, opret nye billettyper og ret eksisterende (fx early bird-perioder). Nye priser gælder kun nye bestillinger
+- **Betaling med bankoverførsel/MobilePay:** arrangørerne indtaster kontonummer, evt. MobilePay, betalingsfrist og en besked under "Betaling" på adminsiden. Efter bestilling ser kunden beløb, konto, en reference ("Bestilling 42") og fristen, med en kopiér-knap ved hver værdi. Når pengene er modtaget, markerer arrangørerne bestillingen som betalt. Bestillinger med overskredet frist markeres på adminsiden
+- **Events:** opret og ret events (navn, datoer, max antal deltagere). En vælger i menuen bestemmer, hvilket event overblik, bestillinger, deltagere og billettyper viser. Uden valg vises det næste kommende event
 
 ## Datamodel
 
@@ -43,23 +51,27 @@ erDiagram
 
 | Tabel | Indhold |
 |---|---|
-| `event` | Selve messen (navn, datoer, evt. max antal deltagere) |
+| `event` | Et event, fx en messe (navn, datoer, evt. max antal deltagere). Der kan være mange |
 | `ticket_type` | Billettyper med pris i øre og gyldighedsperiode |
 | `customer_order` | En bestilling med kontaktperson, status (`PENDING`, `PAID`, `CANCELLED`, `REFUNDED`) og samlet beløb |
 | `participant` | Én række pr. billet med deltagerens fulde navn og den pris, der blev betalt |
 | `payment` | Betalinger fra Stripe (oprettet i databasen, endnu ikke brugt af koden) |
-| `admin_user` | Logins til adminsiden (oprettet i databasen, endnu ikke brugt af koden) |
+| `admin_user` | Logins til adminsiden. Kodeord gemmes som BCrypt-hash |
+| `payment_settings` | Betalingsoplysninger (konto, MobilePay, frist, besked). Altid præcis én række |
 
 Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indtægt pr. billettype. Det tæller kun betalte bestillinger.
 
 ## Designvalg
 
 - **Prisen findes kun på serveren.** Frontenden sender aldrig en pris, så ingen kan ændre den. Serveren slår prisen op ud fra, hvilken billettype der gælder på bestillingstidspunktet.
+- **Én bestilling = ét event.** Serveren afviser en bestilling med billetter til flere events.
+- **Ingen overbooking.** Afventende og betalte bestillinger optager en plads. Ved bestilling låses eventets række i databasen (`SELECT ... FOR UPDATE`), så to samtidige bestillinger ikke kan tage de samme sidste pladser.
 - **Beløb gemmes i øre** som heltal (29500 = 295,00 kr.), så der ikke opstår afrundingsfejl.
 - **Prisen kopieres til hver deltager**, så historikken stemmer, selv hvis billetprisen ændres senere.
 - **En bestilling bliver først betalt, når Stripe bekræfter det** (planlagt), ikke fordi brugeren lander på en tak-side.
 - **Databasen styres af `database/schema.sql`.** Hibernate kontrollerer kun ved opstart, at Java-klasserne passer til tabellerne (`ddl-auto=validate`).
-- **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`.
+- **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`, og den første admins kodeord fra `ADMIN_PASSWORD`.
+- **Lukket, medmindre andet er sagt.** `SecurityConfig` lister præcis, hvad besøgende må (bestillingssiden, `GET /api/ticket-types/current`, `POST /api/orders`). Alt andet kræver adminlogin.
 
 ## Kom i gang med Docker (nemmest)
 
@@ -82,7 +94,7 @@ Databasen ligger på port **5433** på din computer, så den ikke støder sammen
 **Kør koden fra IntelliJ i stedet:** start kun databasen med `docker compose up -d db`, og sæt disse miljøvariabler i din run configuration:
 
 ```
-DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem
+DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem;ADMIN_PASSWORD=dit-admin-kodeord
 ```
 
 **Se databasen i pgAdmin:** opret en server med host `localhost` (eller `host.docker.internal`, hvis pgAdmin selv kører i Docker), port `5433`, bruger `billetsystem` og kodeordet fra `.env`.
@@ -92,6 +104,14 @@ DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/b
 ```bash
 docker compose down -v
 docker compose up --build
+```
+
+**Admin-login:** den første admin oprettes automatisk ud fra `ADMIN_USERNAME` og `ADMIN_PASSWORD` i `.env`, hvis der ikke findes nogen admin endnu. Log ind på http://localhost:8081/admin.
+
+**Opdatering af en eksisterende database:** `schema.sql` køres kun på en tom database. Nye tabeller til en database, der allerede er i brug, ligger i `database/migrations/` og kan køres flere gange uden skade:
+
+```bash
+docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-payment-settings.sql
 ```
 
 **Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
@@ -140,6 +160,8 @@ Sæt miljøvariablen `DB_PASSWORD` til kodeordet fra trin 2 og start programmet.
 
 Programmet kører på **http://localhost:8081**. Porten kan ændres med `server.port` i `application.properties`.
 
+Før første start kan du også sætte `ADMIN_PASSWORD` (mindst 10 tegn) og evt. `ADMIN_USERNAME` (standard: `admin`). Så opretter programmet den første admin automatisk, og du kan logge ind på http://localhost:8081/admin.
+
 ### 4. Prøv det af
 
 Filen `http/requests.http` indeholder færdige forespørgsler, som du kan køre direkte fra IntelliJ. Du kan også bruge `curl`:
@@ -181,7 +203,7 @@ Returnerer de billettyper, der kan købes lige nu (slået til, startet og ikke u
 
 ### `POST /api/orders`
 
-Opretter en bestilling med status `PENDING`. Svarer med `201 Created`.
+Opretter en bestilling med status `PENDING`. Svarer med `201 Created`. Har arrangørerne udfyldt betalingsoplysninger, indeholder svaret `payment` med beløb, konto, reference og frist.
 
 | Felt | Krav |
 |---|---|
@@ -193,12 +215,34 @@ Opretter en bestilling med status `PENDING`. Svarer med `201 Created`.
 
 Er input ugyldigt, svarer serveren med `400` og en forklaring, fx `{"fejl": "Ugyldige data", "felter": {...}}`. Bestiller man en billettype, der ikke kan købes lige nu (fx en udløbet early bird), får man også `400`.
 
+### Admin-API (kræver login)
+
+| Endpoint | Hvad |
+|---|---|
+| `GET /api/admin/payment-settings`, `PUT /api/admin/payment-settings` | Hent eller gem betalingsoplysninger |
+| `GET /api/admin/events` | Alle events med salgstal |
+| `POST /api/admin/events`, `PUT /api/admin/events/{id}` | Opret eller ret et event |
+| `GET /api/admin/overview` | Alle tal til overblikket |
+| `GET /api/admin/orders?status=&search=` | Bestillinger, nyeste først |
+| `GET /api/admin/orders/{id}` | Én bestilling med deltagere |
+| `POST /api/admin/orders/{id}/status` | Skift status, fx `{"status": "PAID"}` |
+| `GET /api/admin/orders.csv` | Alle bestillinger som CSV |
+| `GET /api/admin/participants?search=&ticketTypeId=&includeCancelled=` | Deltagerliste |
+| `GET /api/admin/participants.csv` | Deltagerliste som CSV |
+| `GET /api/admin/ticket-types` | Billettyper med salgstal |
+| `POST /api/admin/ticket-types?eventId=`, `PUT /api/admin/ticket-types/{id}` | Opret en billettype til et event, eller ret en |
+
+POST og PUT kræver CSRF-nøglen fra `GET /api/csrf` i headeren `X-CSRF-TOKEN`.
+
+**Om tallene:** "Betalt" er bestillinger med status `PAID`, og "afventer" er `PENDING`. Annullerede og refunderede bestillinger tæller ikke som solgt. Tallene gælder ét event ad gangen (`?eventId=`). Uden `eventId` bruges det næste event, der ikke er slut.
+
 ## Projektstruktur
 
 ```
 billetsystem/
 ├─ database/
-│  └─ schema.sql                 databaseskema, view og eksempeldata
+│  ├─ schema.sql                 databaseskema, view og eksempeldata
+│  └─ migrations/                ændringer til en database, der allerede er i brug
 ├─ http/
 │  └─ requests.http              færdige testforespørgsler til IntelliJ
 ├─ Dockerfile                    bygger og kører programmet
@@ -210,12 +254,14 @@ billetsystem/
    │  ├─ BilletsystemApplication.java
    │  ├─ model/                  JPA-klasser (Event, TicketType, CustomerOrder, Participant)
    │  ├─ repository/             opslag i databasen (Spring Data JPA)
-   │  ├─ service/                forretningsregler (TicketService, OrderService)
+   │  ├─ service/                forretningsregler (TicketService, OrderService, AdminOrderService, StatisticsService)
    │  ├─ controller/             REST-API og fejlhåndtering
+   │  ├─ security/               adgangsregler, login og oprettelse af første admin
    │  └─ dto/                    objekter til ind- og udgående JSON
    └─ resources/
       ├─ application.properties
       └─ static/                 bestillingssiden (index.html, css/, js/)
+         └─ admin/               login, overblik, bestillinger, deltagere og billettyper
 ```
 
 ## Roadmap
@@ -224,9 +270,13 @@ billetsystem/
 - [x] Hent billettyper, der kan købes nu
 - [x] Opret bestilling med serverberegnet pris og validering
 - [x] Bestillingsside i HTML og JavaScript
-- [ ] Adminlogin (Spring Security)
-- [ ] Deltagerliste, salgstal og eksport til CSV
-- [ ] Administration af billettyper og early bird-perioder
+- [x] Adminlogin (Spring Security)
+- [x] Overblik med salgstal og graf
+- [x] Bestillinger med statusskift (markér som betalt ved bankoverførsel)
+- [x] Deltagerliste, tjekind-liste og eksport til CSV
+- [x] Administration af billettyper og early bird-perioder
+- [x] Flere events med max antal deltagere
+- [x] Betalingsinfo til bankoverførsel og MobilePay med frist
 - [ ] Betaling med Stripe (kort og MobilePay)
 - [ ] Bekræftelsesmail
 - [ ] Bordreservation (inkl. begynderbord) og gæstebilletter

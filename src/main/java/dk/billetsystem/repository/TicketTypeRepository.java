@@ -28,4 +28,7 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Integer>
             order by t.priceOre
             """)
     List<TicketType> findCurrent(@Param("now") OffsetDateTime now);
+
+    /** Alle billettyper til en messe, sorteret efter hvornår de starter. Til adminsiden. */
+    List<TicketType> findByEventIdOrderByValidFrom(Integer eventId);
 }

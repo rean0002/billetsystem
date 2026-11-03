@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Billettyper · Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/admin/admin.js" defer></script>
+    <script src="/admin/billettyper.js" defer></script>
+</head>
+<body class="admin">
+
+<!-- Menuen er ens på alle adminsider -->
+<header class="admin-bar">
+    <div class="admin-bar-inner">
+        <a class="brand" href="/admin/index.html">Billetsystem</a>
+        <nav class="admin-nav" aria-label="Adminmenu">
+            <a href="/admin/index.html">Overblik</a>
+            <a href="/admin/bestillinger.html">Bestillinger</a>
+            <a href="/admin/deltagere.html">Deltagere</a>
+            <a href="/admin/billettyper.html">Billettyper</a>
+            <a href="/admin/events.html">Events</a>
+            <a href="/admin/betaling.html">Betaling</a>
+        </nav>
+        <!-- Alle sider viser tal for det valgte event. Valget huskes i browseren. -->
+        <label class="event-picker">
+            <span>Viser event:</span>
+            <select id="event-select"></select>
+        </label>
+        <!-- Log ud skal være en POST med CSRF-nøgle, ellers kunne en anden side logge dig ud -->
+        <form method="post" action="/admin/logout" class="logout">
+            <span class="whoami" id="whoami"></span>
+            <input type="hidden" id="logout-csrf">
+            <button type="submit" class="link-button">Log ud</button>
+        </form>
+    </div>
+</header>
+
+<main class="page admin-page">
+    <p id="page-error" class="form-error" role="alert" hidden></p>
+
+    <header class="page-header row">
+        <div>
+            <p class="eyebrow">Billettyper</p>
+            <h1>Billettyper og priser</h1>
+            <p class="hint">Early bird er bare en billettype med en slutdato. Priserne skifter automatisk.</p>
+        </div>
+        <button type="button" class="button primary auto" id="new-type">+ Ny billettype</button>
+    </header>
+
+    <section class="card flush">
+        <table class="data-table" id="types-table">
+            <thead>
+            <tr>
+                <th>Billettype</th><th>Til salg</th><th>Status</th>
+                <th class="num">Solgt</th><th class="num">Omsætning</th><th></th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <dialog id="type-dialog" class="dialog" aria-labelledby="type-dialog-title">
+        <form id="type-form" method="dialog" novalidate>
+            <div class="dialog-head">
+                <h2 id="type-dialog-title">Ny billettype</h2>
+                <button type="button" class="link-button" id="type-cancel">Annullér</button>
+            </div>
+
+            <div class="field">
+                <label for="type-name">Navn</label>
+                <input id="type-name" name="name" maxlength="100" required placeholder="fx Early Bird">
+                <p class="field-error" data-error-for="name"></p>
+            </div>
+            <div class="field">
+                <label for="type-price">Pris i kr.</label>
+                <input id="type-price" name="priceOre" type="number" min="0" step="0.01" required inputmode="decimal">
+                <p class="field-error" data-error-for="priceOre"></p>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="type-from">Til salg fra</label>
+                    <input id="type-from" name="validFrom" type="datetime-local" required>
+                    <p class="field-error" data-error-for="validFrom"></p>
+                </div>
+                <div class="field">
+                    <label for="type-to">Til salg til <span class="optional">(valgfri)</span></label>
+                    <input id="type-to" name="validTo" type="datetime-local">
+                    <p class="field-error" data-error-for="validTo"></p>
+                </div>
+            </div>
+            <label class="checkbox">
+                <input type="checkbox" id="type-active" checked> Slået til (kan købes i perioden)
+            </label>
+            <p class="hint">Ændrer du prisen, gælder den kun nye bestillinger. Solgte billetter beholder den pris, der blev betalt.</p>
+
+            <p id="type-error" class="form-error" role="alert" hidden></p>
+            <button type="submit" class="button primary" id="type-save">Gem</button>
+        </form>
+    </dialog>
+
+</main>
+</body>
+</html>

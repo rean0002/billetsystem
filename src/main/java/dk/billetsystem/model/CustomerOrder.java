@@ -97,6 +97,20 @@ public class CustomerOrder {
         this.totalOre = totalOre;
     }
 
+    /**
+     * Skifter status, fx når admin markerer en bankoverførsel som modtaget.
+     * Ulovlige skift (se OrderStatus.canChangeTo) giver en IllegalStateException.
+     */
+    public void changeStatus(OrderStatus newStatus) {
+        if (!status.canChangeTo(newStatus)) {
+            throw new IllegalStateException("En bestilling med status " + status + " kan ikke ændres til " + newStatus);
+        }
+        status = newStatus;
+        if (newStatus == OrderStatus.PAID) {
+            paidAt = OffsetDateTime.now();
+        }
+    }
+
     public String getStripeSessionId() {
         return stripeSessionId;
     }
@@ -111,5 +125,10 @@ public class CustomerOrder {
 
     public List<Participant> getParticipants() {
         return participants;
+    }
+
+    /** Det event, bestillingen gælder. Alle billetter i en bestilling er til samme event (tjekkes i OrderService). */
+    public Event getEvent() {
+        return participants.isEmpty() ? null : participants.get(0).getTicketType().getEvent();
     }
 }

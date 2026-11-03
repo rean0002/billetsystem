@@ -6,7 +6,7 @@
 
 -- Kun under udvikling: nulstiller alt, så du kan køre filen igen og igen.
 DROP VIEW  IF EXISTS v_ticket_sales;
-DROP TABLE IF EXISTS payment, participant, customer_order, ticket_type, event, admin_user CASCADE;
+DROP TABLE IF EXISTS payment, participant, customer_order, ticket_type, event, admin_user, payment_settings CASCADE;
 
 -- ---------------------------------------------------------------------
 -- event: selve messen. Egen tabel, så næste års messe blot er en ny række.
@@ -81,6 +81,23 @@ CREATE TABLE payment (
                              CHECK (status IN ('SUCCEEDED', 'FAILED', 'REFUNDED')),
                          created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ---------------------------------------------------------------------
+-- payment_settings: betalingsoplysninger, som kunden ser efter bestilling
+-- (bankoverførsel og evt. MobilePay). Altid præcis én række (id = 1),
+-- så arrangørerne kan rette den på adminsiden.
+-- ---------------------------------------------------------------------
+CREATE TABLE payment_settings (
+                                  id               INTEGER      PRIMARY KEY CHECK (id = 1),
+                                  account_holder   VARCHAR(100),
+                                  reg_number       VARCHAR(4)   CHECK (reg_number ~ '^[0-9]{4}$'),
+                                  account_number   VARCHAR(10)  CHECK (account_number ~ '^[0-9]{1,10}$'),
+                                  mobilepay_number VARCHAR(30),
+                                  payment_days     INTEGER      NOT NULL DEFAULT 7 CHECK (payment_days BETWEEN 1 AND 60),
+                                  instructions     TEXT,
+                                  updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+INSERT INTO payment_settings (id) VALUES (1);
 
 -- ---------------------------------------------------------------------
 -- admin_user: logins til adminsiden. Gem ALDRIG kodeord i klartekst –
