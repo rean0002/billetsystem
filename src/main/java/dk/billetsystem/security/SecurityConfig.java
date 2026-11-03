@@ -25,7 +25,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Bestillingssiden og dens filer
-                        .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/fonts/**", "/favicon.ico").permitAll()
                         // Det offentlige API
                         .requestMatchers(HttpMethod.GET, "/api/ticket-types/**", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
