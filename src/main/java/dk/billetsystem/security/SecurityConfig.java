@@ -9,7 +9,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+
+import java.time.Clock;
 
 /**
  * Adgangsreglerne for hele programmet.
@@ -21,8 +24,10 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, LoginAttemptService loginAttempts) throws Exception {
         http
+                // Afviser login-forsøg, mens brugernavnet eller IP-adressen er låst efter for mange forkerte kodeord
+                .addFilterBefore(new LoginThrottleFilter(loginAttempts), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Bestillingssiden og dens filer
                         .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/fonts/**", "/favicon.ico").permitAll()
@@ -59,6 +64,12 @@ public class SecurityConfig {
                         PathPatternRequestMatcher.withDefaults().matcher("/api/**")));
 
         return http.build();
+    }
+
+    /** Uret, LoginAttemptService bruger. (I testene bruges et ur, man selv kan stille frem.) */
+    @Bean
+    public Clock clock() {
+        return Clock.systemUTC();
     }
 
     /** BCrypt laver en ny, tilfældig "salt" for hvert kodeord, så to ens kodeord får forskellige hashes. */

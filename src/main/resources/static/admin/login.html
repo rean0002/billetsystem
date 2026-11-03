@@ -20,6 +20,9 @@
     <!-- Formularen sendes direkte til Spring Security, som tjekker brugernavn og kodeord -->
     <form id="login-form" class="card" method="post" action="/admin/login">
         <p id="login-error" class="form-error" role="alert" hidden>Forkert brugernavn eller kodeord.</p>
+        <p id="login-locked" class="form-error" role="alert" hidden>
+            For mange forkerte forsøg. Af sikkerhedshensyn er login spærret i 15 minutter. Prøv igen senere.
+        </p>
 
         <div class="field">
             <label for="username">Brugernavn</label>

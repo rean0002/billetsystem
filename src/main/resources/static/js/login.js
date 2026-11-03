@@ -1,13 +1,14 @@
 /*
  * Login-siden. Selve login klares af Spring Security. Scriptet sørger kun for to ting:
  *   1. at hente CSRF-nøglen, som formularen skal sende med
- *   2. at vise en besked, hvis login fejlede, eller man lige er logget ud
+ *   2. at vise en besked, hvis login fejlede, var spærret, eller man lige er logget ud
  */
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Spring sender os tilbage med ?error eller ?logout i adressen
+    // Spring sender os tilbage med ?error, ?locked eller ?logout i adressen
     const params = new URLSearchParams(location.search);
     document.getElementById("login-error").hidden = !params.has("error");
+    document.getElementById("login-locked").hidden = !params.has("locked");
     document.getElementById("logged-out").hidden = !params.has("logout");
 
     try {

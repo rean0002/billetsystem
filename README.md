@@ -33,6 +33,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - `POST /api/orders` opretter en bestilling med flere deltagere. Prisen beregnes på serveren, og inputtet valideres
 - Samlet fejlformat, så frontenden altid får læselige fejlbeskeder
 - Adminlogin på http://localhost:8081/admin med brugere fra `admin_user` (BCrypt-hashede kodeord). Alt under `/admin` og `/api/admin` kræver login
+- **Beskyttelse mod gætteri:** efter 5 forkerte kodeord på samme brugernavn, eller 20 fra samme IP-adresse, inden for 15 minutter spærres login i 15 minutter. Ukendte brugernavne behandles ens, så man ikke kan se, om et brugernavn findes. Et vellykket login nulstiller tælleren
 - **Overblik:** omsætning (betalt og afventende), solgte billetter, aktivitet de seneste 7 dage, graf over billetter pr. dag, salg pr. billettype og de nyeste bestillinger. En påmindelse viser, hvor mange bestillinger der venter på betaling
 - **Bestillinger:** søg og filtrér på status, se detaljer og skift status (markér som betalt, annullér, refundér, genåbn). Kun lovlige statusskift er mulige. Eksport til CSV
 - **Deltagerliste:** alle deltagere med søgning og filter på billettype, eksport til CSV (åbner direkte i dansk Excel) og en printvenlig tjekind-liste med afkrydsningsfelt til indgangen
@@ -134,6 +135,10 @@ docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrat
 | `MAIL_REPLY_TO` | valgfri: adressen, kunderne svarer til |
 
 Brug en afsenderadresse på jeres eget domæne, og opsæt SPF og DKIM hos mailudbyderen, så mailene ikke havner i spam.
+
+**Bag en proxy:** kører programmet bag en proxy eller load balancer, så sæt `FORWARD_HEADERS_STRATEGY=native`. Ellers ser alle ud til at have proxyens IP-adresse, og login-spærringen pr. IP rammer alle på én gang.
+
+**Låst ude?** Spærringen ligger i hukommelsen, så en genstart af programmet ophæver den med det samme (`docker compose restart app`).
 
 **Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
 
@@ -259,6 +264,14 @@ POST og PUT kræver CSRF-nøglen fra `GET /api/csrf` i headeren `X-CSRF-TOKEN`.
 
 **Om tallene:** "Betalt" er bestillinger med status `PAID`, og "afventer" er `PENDING`. Annullerede og refunderede bestillinger tæller ikke som solgt. Tallene gælder ét event ad gangen (`?eventId=`). Uden `eventId` bruges det næste event, der ikke er slut.
 
+## Tests
+
+```bash
+docker run --rm -v "$PWD":/app -w /app maven:3.9-eclipse-temurin-21 mvn -q test
+```
+
+Eller kør dem fra IntelliJ (højreklik på `src/test/java` → Run 'All Tests'). Testene kræver ingen database.
+
 ## Projektstruktur
 
 ```
@@ -269,9 +282,10 @@ billetsystem/
 ├─ http/
 │  └─ requests.http              færdige testforespørgsler til IntelliJ
 ├─ Dockerfile                    bygger og kører programmet
-├─ docker-compose.yml            PostgreSQL + programmet
+├─ docker-compose.yml            PostgreSQL, programmet og Mailpit
 ├─ .env.example                  skabelon til .env (DB_PASSWORD)
 ├─ pom.xml
+├─ src/test/java/               unit tests (fx reglerne for login-spærring)
 └─ src/main/
    ├─ java/dk/billetsystem/
    │  ├─ BilletsystemApplication.java
