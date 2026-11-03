@@ -152,6 +152,7 @@ function renderPriceList() {
         const li = document.createElement("li");
 
         const name = document.createElement("span");
+        name.className = "tag-name";
         name.textContent = type.name;
         if (type.validTo) {
             const until = document.createElement("small");
@@ -290,7 +291,10 @@ function showConfirmation(order) {
     }
 
     // Har arrangørerne udfyldt betalingsoplysninger, vises konto, reference og frist
-    if (order.payment) renderPaymentInfo(el("confirm-payment"), order.payment);
+    if (order.payment) {
+        renderPaymentInfo(el("confirm-payment"), order.payment);
+        el("confirm-total").parentElement.hidden = true; // beløbet står allerede i betalingsinfo
+    }
     else el("confirm-no-payment").hidden = false;
 
     el("order-form").hidden = true;

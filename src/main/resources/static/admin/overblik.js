@@ -53,8 +53,8 @@ function renderTiles({ event, money, tickets, recent }) {
         { label: "Afventer betaling", value: formatPrice(money.pendingOre, true),
           detail: `Gns. bestilling ${formatPrice(money.averageOrderOre, true)}` },
         { label: "Billetter solgt", value: sold, detail: capacity },
-        { label: "Billetter, seneste 7 dage", value: recent.ticketsLast7Days,
-          detail: `${recent.ordersLast7Days} bestillinger · ${recent.ordersToday} i dag` },
+        { label: "Seneste 7 dage", value: recent.ticketsLast7Days,
+          detail: `billetter · ${recent.ordersLast7Days} bestillinger · ${recent.ordersToday} i dag` },
     ];
 
     document.getElementById("tiles").replaceChildren(...tiles.map((t) =>
