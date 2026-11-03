@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: billetsystem
+      POSTGRES_USER: billetsystem
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Opret en .env-fil med DB_PASSWORD, se .env.example}
+    ports:
+      # 5433 på din Mac, så den ikke støder sammen med en anden Postgres på 5432
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Køres kun første gang, når databasen er tom
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "billetsystem", "-d", "billetsystem"]
+      interval: 3s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/billetsystem
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

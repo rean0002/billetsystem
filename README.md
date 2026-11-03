@@ -19,6 +19,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 |---|---|
 | Backend | Java 21, Spring Boot 3.5 (Spring Web, Spring Data JPA, Bean Validation) |
 | Database | PostgreSQL |
+| Udviklingsmiljø | Docker Compose |
 | Frontend | HTML og JavaScript (planlagt) |
 | Betaling | Stripe Checkout med kort og MobilePay (planlagt) |
 
@@ -59,7 +60,42 @@ Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indt
 - **Databasen styres af `database/schema.sql`.** Hibernate kontrollerer kun ved opstart, at Java-klasserne passer til tabellerne (`ddl-auto=validate`).
 - **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`.
 
-## Kom i gang
+## Kom i gang med Docker (nemmest)
+
+Kræver kun [Docker Desktop](https://www.docker.com/products/docker-desktop/). Du behøver hverken Java, Maven eller PostgreSQL installeret.
+
+```bash
+cp .env.example .env      # ret DB_PASSWORD i .env til dit eget kodeord
+docker compose up --build
+```
+
+Det starter:
+
+| Service | Hvad | Adresse |
+|---|---|---|
+| `db` | PostgreSQL 16, hvor `database/schema.sql` køres automatisk | `localhost:5433` |
+| `app` | Spring Boot-programmet | http://localhost:8081 |
+
+Databasen ligger på port **5433** på din computer, så den ikke støder sammen med en anden PostgreSQL på 5432. Inde i Docker taler `app` med `db` på den almindelige port.
+
+**Kør koden fra IntelliJ i stedet:** start kun databasen med `docker compose up -d db`, og sæt disse miljøvariabler i din run configuration:
+
+```
+DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem
+```
+
+**Se databasen i pgAdmin:** opret en server med host `localhost` (eller `host.docker.internal`, hvis pgAdmin selv kører i Docker), port `5433`, bruger `billetsystem` og kodeordet fra `.env`.
+
+**Nulstil databasen:** `schema.sql` køres kun, når databasen er tom. Sådan starter du forfra:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+**Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
+
+## Kom i gang uden Docker
 
 ### Krav
 
@@ -164,6 +200,9 @@ billetsystem/
 │  └─ schema.sql                 databaseskema, view og eksempeldata
 ├─ http/
 │  └─ requests.http              færdige testforespørgsler til IntelliJ
+├─ Dockerfile                    bygger og kører programmet
+├─ docker-compose.yml            PostgreSQL + programmet
+├─ .env.example                  skabelon til .env (DB_PASSWORD)
 ├─ pom.xml
 └─ src/main/
    ├─ java/dk/billetsystem/
