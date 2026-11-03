@@ -46,6 +46,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Bekræftelsesmails (SMTP) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Adminlogin: kodeord-hashing, login-session og adgangsregler -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -3,11 +3,14 @@ package dk.billetsystem.service;
 import dk.billetsystem.dto.AdminOrderResponse;
 import dk.billetsystem.dto.AdminParticipantResponse;
 import dk.billetsystem.dto.SeatingResponse;
+import dk.billetsystem.mail.OrderMailEvents;
+import dk.billetsystem.mail.OrderMailService;
 import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.OrderStatus;
 import dk.billetsystem.model.Participant;
 import dk.billetsystem.repository.CustomerOrderRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,12 +41,17 @@ public class AdminOrderService {
     private final CustomerOrderRepository orderRepository;
     private final EventService eventService;
     private final PaymentSettingsService paymentSettingsService;
+    private final OrderMailService mailService;
+    private final ApplicationEventPublisher events;
 
     public AdminOrderService(CustomerOrderRepository orderRepository, EventService eventService,
-                             PaymentSettingsService paymentSettingsService) {
+                             PaymentSettingsService paymentSettingsService, OrderMailService mailService,
+                             ApplicationEventPublisher events) {
         this.orderRepository = orderRepository;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
+        this.mailService = mailService;
+        this.events = events;
     }
 
     /** En bestilling, som adminsiden ser den, inkl. betalingsfrist. */
@@ -76,7 +84,28 @@ public class AdminOrderService {
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        // Kunden får besked om, at betalingen er modtaget, når ændringen er gemt (se OrderMailListener)
+        if (newStatus == OrderStatus.PAID) events.publishEvent(new OrderMailEvents.OrderPaid(id));
         return toResponse(order);
+    }
+
+    /**
+     * Sender en mail igen, fx hvis kunden ikke har fået den. Fejler afsendelsen, får admin fejlbeskeden at se.
+     * paymentReceived = true sender mailen om modtaget betaling i stedet for bekræftelsen.
+     */
+    @Transactional
+    public AdminOrderResponse resendMail(int id, boolean paymentReceived) {
+        CustomerOrder order = getOrder(id);
+        if (paymentReceived && order.getStatus() != OrderStatus.PAID) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bestillingen er ikke markeret som betalt");
+        }
+        try {
+            if (paymentReceived) mailService.sendPaymentReceived(id);
+            else mailService.sendConfirmation(id);
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        }
+        return toResponse(getOrder(id));
     }
 
     /**

@@ -138,6 +138,12 @@ public class AdminController {
         return adminOrderService.changeStatus(id, request.status());
     }
 
+    /** POST /api/admin/orders/5/mail?type=confirmation (eller payment-received): send mailen igen. */
+    @PostMapping("/api/admin/orders/{id}/mail")
+    public AdminOrderResponse resendMail(@PathVariable int id, @RequestParam(defaultValue = "confirmation") String type) {
+        return adminOrderService.resendMail(id, "payment-received".equals(type));
+    }
+
     @GetMapping("/api/admin/orders.csv")
     public ResponseEntity<byte[]> ordersCsv(@RequestParam(required = false) Integer eventId) {
         return csv("bestillinger", adminOrderService.ordersCsv(eventId));

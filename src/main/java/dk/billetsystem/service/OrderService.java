@@ -1,12 +1,14 @@
 package dk.billetsystem.service;
 
 import dk.billetsystem.dto.OrderRequest;
+import dk.billetsystem.mail.OrderMailEvents;
 import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.Participant;
 import dk.billetsystem.model.TicketType;
 import dk.billetsystem.repository.CustomerOrderRepository;
 import dk.billetsystem.repository.EventRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +28,16 @@ public class OrderService {
     private final TicketService ticketService;
     private final EventService eventService;
     private final EventRepository eventRepository;
+    private final ApplicationEventPublisher events;
 
     public OrderService(CustomerOrderRepository orderRepository, TicketService ticketService,
-                        EventService eventService, EventRepository eventRepository) {
+                        EventService eventService, EventRepository eventRepository,
+                        ApplicationEventPublisher events) {
         this.orderRepository = orderRepository;
         this.ticketService = ticketService;
         this.eventService = eventService;
         this.eventRepository = eventRepository;
+        this.events = events;
     }
 
     /**
@@ -69,7 +74,10 @@ public class OrderService {
         order.setTotalOre(total);
 
         checkOneEventAndCapacity(order);
-        return orderRepository.save(order);
+        CustomerOrder saved = orderRepository.save(order);
+        // Bekræftelsesmailen sendes, når bestillingen er gemt (se OrderMailListener)
+        events.publishEvent(new OrderMailEvents.OrderCreated(saved.getId()));
+        return saved;
     }
 
     /**

@@ -605,6 +605,13 @@ a.notice-warn:hover {
     outline: none;
 }
 
+.mail-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .confirmation ul {
     margin: 4px 0 12px;
     padding-left: 20px;

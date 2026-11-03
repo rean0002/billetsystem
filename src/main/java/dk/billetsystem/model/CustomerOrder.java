@@ -46,6 +46,8 @@ public class CustomerOrder {
     // fordi Hibernate altid sender alle kolonner med i sin INSERT.)
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime paidAt;
+    private OffsetDateTime confirmationSentAt; // bekræftelsesmail sendt
+    private OffsetDateTime paidMailSentAt;     // mail om modtaget betaling sendt
 
     // En bestilling har mange deltagere. "mappedBy" peger på feltet i Participant, der ejer relationen.
     // CascadeType.ALL = når vi gemmer en ordre, gemmes dens deltagere automatisk med.
@@ -132,6 +134,22 @@ public class CustomerOrder {
 
     public OffsetDateTime getPaidAt() {
         return paidAt;
+    }
+
+    public OffsetDateTime getConfirmationSentAt() {
+        return confirmationSentAt;
+    }
+
+    public OffsetDateTime getPaidMailSentAt() {
+        return paidMailSentAt;
+    }
+
+    public void markConfirmationSent() {
+        confirmationSentAt = OffsetDateTime.now();
+    }
+
+    public void markPaidMailSent() {
+        paidMailSentAt = OffsetDateTime.now();
     }
 
     public List<Participant> getParticipants() {

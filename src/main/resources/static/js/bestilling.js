@@ -297,6 +297,14 @@ function showConfirmation(order) {
         names.append(li);
     }
 
+    // Sendes der en bekræftelsesmail, nævnes adressen, så kunden kan se, om den er stavet rigtigt
+    if (order.confirmationEmail) {
+        el("confirm-mail").textContent = `Vi sender en bekræftelse med de samme oplysninger til ${order.confirmationEmail}. ` +
+            "Kan du ikke finde den, så kig i spam-mappen.";
+        el("confirm-mail").hidden = false;
+        el("confirm-save").hidden = true;
+    }
+
     // Har arrangørerne udfyldt betalingsoplysninger, vises konto, reference og frist
     if (order.payment) {
         renderPaymentInfo(el("confirm-payment"), order.payment);

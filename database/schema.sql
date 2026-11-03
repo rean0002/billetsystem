@@ -52,7 +52,9 @@ CREATE TABLE customer_order (
                                 note              TEXT,                         -- besked til arrangørerne
                                 seat_with         TEXT,                         -- fulde navne på andre (med egen billet), gruppen vil sidde med
                                 created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
-                                paid_at           TIMESTAMPTZ
+                                paid_at           TIMESTAMPTZ,
+                                confirmation_sent_at TIMESTAMPTZ,              -- bekræftelsesmail sendt
+                                paid_mail_sent_at    TIMESTAMPTZ               -- mail om modtaget betaling sendt
 );
 
 -- ---------------------------------------------------------------------

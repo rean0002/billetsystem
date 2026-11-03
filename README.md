@@ -21,7 +21,8 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 | Database | PostgreSQL |
 | Udviklingsmiljø | Docker Compose |
 | Frontend | HTML, CSS og JavaScript uden framework (serveres af Spring Boot fra `src/main/resources/static`) |
-| Betaling | Stripe Checkout med kort og MobilePay (planlagt) |
+| Betaling | Bankoverførsel/MobilePay med betalingsinfo; Stripe Checkout er planlagt |
+| Mail | Spring Mail (SMTP); Mailpit under udvikling |
 
 ## Hvad der virker nu
 
@@ -37,6 +38,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - **Deltagerliste:** alle deltagere med søgning og filter på billettype, eksport til CSV (åbner direkte i dansk Excel) og en printvenlig tjekind-liste med afkrydsningsfelt til indgangen
 - **Billettyper:** se priser, perioder og salg, opret nye billettyper og ret eksisterende (fx early bird-perioder). Nye priser gælder kun nye bestillinger
 - **Betaling med bankoverførsel/MobilePay:** arrangørerne indtaster kontonummer, evt. MobilePay, betalingsfrist og en besked under "Betaling" på adminsiden. Efter bestilling ser kunden beløb, konto, en reference ("Bestilling 42") og fristen, med en kopiér-knap ved hver værdi. Når pengene er modtaget, markerer arrangørerne bestillingen som betalt. Bestillinger med overskredet frist markeres på adminsiden
+- **Bekræftelsesmails:** efter bestilling får kunden en mail med deltagere, pladsønsker, total, betalingsinfo og eventets praktiske info. Når arrangørerne markerer bestillingen som betalt, får kunden en mail om, at betalingen er modtaget. På adminsiden kan man se, om mailene er sendt, og sende dem igen. Mails sendes i baggrunden, så en nede mailserver aldrig stopper en bestilling
 - **Pladsreservation:** ved hver deltager kan man vælge begynder-/singlebordet eller bede om en bordende af helbredsmæssige årsager (kun ja/nej, årsagen gemmes ikke). Deltagere på samme bestilling sidder sammen, og en gruppe kan skrive fulde navne på andre med egen billet, de vil sidde med
 - **Borde (admin):** grupper med de navne, de vil sidde med, slået op blandt deltagerne (navne uden billet markeres), samt lister over begynder-/singlebordet og bordender. Kan printes. Ønskerne står også på deltagerlisten, i bestillingen og i CSV-filen
 - **Praktisk info pr. event**, fx gæstebilletter og åbningstider, vises under "Godt at vide" på bestillingssiden
@@ -92,6 +94,7 @@ Det starter:
 |---|---|---|
 | `db` | PostgreSQL 16, hvor `database/schema.sql` køres automatisk | `localhost:5433` |
 | `app` | Spring Boot-programmet | http://localhost:8081 |
+| `mailpit` | Fanger alle mails fra programmet, så du kan se dem (der sendes aldrig rigtige mails) | http://localhost:8025 |
 
 Databasen ligger på port **5433** på din computer, så den ikke støder sammen med en anden PostgreSQL på 5432. Inde i Docker taler `app` med `db` på den almindelige port.
 
@@ -117,7 +120,20 @@ docker compose up --build
 ```bash
 docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-payment-settings.sql
 docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-pladsreservation.sql
+docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-bekraeftelsesmail.sql
 ```
+
+**Mail i drift:** uden for Docker sendes mails kun, hvis `MAIL_HOST` er sat. Ellers virker alt andet som normalt. Sæt disse miljøvariabler til jeres mailudbyders SMTP-server:
+
+| Variabel | Eksempel |
+|---|---|
+| `MAIL_HOST` | `smtp.example.com` |
+| `MAIL_PORT` | `587` |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | login hos mailudbyderen |
+| `MAIL_FROM` | `Eventforeningen <billetter@example.com>` |
+| `MAIL_REPLY_TO` | valgfri: adressen, kunderne svarer til |
+
+Brug en afsenderadresse på jeres eget domæne, og opsæt SPF og DKIM hos mailudbyderen, så mailene ikke havner i spam.
 
 **Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
 
@@ -232,6 +248,7 @@ Er input ugyldigt, svarer serveren med `400` og en forklaring, fx `{"fejl": "Ugy
 | `GET /api/admin/orders?status=&search=` | Bestillinger, nyeste først |
 | `GET /api/admin/orders/{id}` | Én bestilling med deltagere |
 | `POST /api/admin/orders/{id}/status` | Skift status, fx `{"status": "PAID"}` |
+| `POST /api/admin/orders/{id}/mail?type=confirmation` | Send bekræftelsen igen (`type=payment-received`: mailen om modtaget betaling) |
 | `GET /api/admin/orders.csv` | Alle bestillinger som CSV |
 | `GET /api/admin/participants?search=&ticketTypeId=&includeCancelled=` | Deltagerliste |
 | `GET /api/admin/participants.csv` | Deltagerliste som CSV |
@@ -262,6 +279,7 @@ billetsystem/
    │  ├─ repository/             opslag i databasen (Spring Data JPA)
    │  ├─ service/                forretningsregler (TicketService, OrderService, AdminOrderService, StatisticsService)
    │  ├─ controller/             REST-API og fejlhåndtering
+   │  ├─ mail/                   bekræftelsesmails (indhold, afsendelse i baggrunden)
    │  ├─ security/               adgangsregler, login og oprettelse af første admin
    │  └─ dto/                    objekter til ind- og udgående JSON
    └─ resources/
@@ -284,5 +302,5 @@ billetsystem/
 - [x] Flere events med max antal deltagere
 - [x] Betalingsinfo til bankoverførsel og MobilePay med frist
 - [ ] Betaling med Stripe (kort og MobilePay)
-- [ ] Bekræftelsesmail
+- [x] Bekræftelsesmail og mail om modtaget betaling
 - [x] Pladsreservation (grupper, begynder-/singlebord, bordende) og info om gæstebilletter

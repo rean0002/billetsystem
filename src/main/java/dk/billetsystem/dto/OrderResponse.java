@@ -16,9 +16,11 @@ public record OrderResponse(
         int totalOre,
         List<String> participantNames,
         OffsetDateTime createdAt,
-        PaymentInstructions payment
+        PaymentInstructions payment,
+        String confirmationEmail
 ) {
-    public static OrderResponse from(CustomerOrder order, PaymentInstructions payment) {
+    /** @param mailEnabled sendes der en bekræftelsesmail? I så fald står adressen i svaret, så siden kan nævne den. */
+    public static OrderResponse from(CustomerOrder order, PaymentInstructions payment, boolean mailEnabled) {
         List<String> names = order.getParticipants().stream()
                 .map(Participant::getFullName)
                 .toList();
@@ -28,6 +30,7 @@ public record OrderResponse(
                 order.getTotalOre(),
                 names,
                 order.getCreatedAt(),
-                payment);
+                payment,
+                mailEnabled ? order.getEmail() : null);
     }
 }

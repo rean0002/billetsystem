@@ -113,6 +113,8 @@ function renderOrder(o) {
         h("dt", {}, "Betalingsfrist"), h("dd", {}, formatDate(o.paymentDueDate),
             o.overdue && h("span", { className: "overdue" }, " · overskredet")),
         h("dt", {}, "Betalt"), h("dd", {}, formatDateTime(o.paidAt)),
+        h("dt", {}, "Bekræftelse"), h("dd", {}, mailStatus(o, "confirmation", o.confirmationSentAt)),
+        o.status === "PAID" && [h("dt", {}, "Mail om betaling"), h("dd", {}, mailStatus(o, "payment-received", o.paidMailSentAt))],
         // Referencen, kunden er bedt om at skrive i beskeden ved bankoverførsel
         h("dt", {}, "Reference"), h("dd", {}, "Bestilling " + o.id));
 
@@ -155,6 +157,31 @@ function renderOrder(o) {
             (o.overdue ? " Fristen er overskredet: skriv evt. til kunden, eller annullér bestillingen for at frigive pladserne." : ""));
 
     document.getElementById("dialog-body").replaceChildren(contact, note || "", seatWith || "", h("h3", {}, "Deltagere"), participants, error, hint || "", actions);
+}
+
+/**
+ * "Sendt 3. nov. 2026, 16.20" eller "Ikke sendt", og en knap til at sende mailen (igen).
+ * type er "confirmation" eller "payment-received".
+ */
+function mailStatus(o, type, sentAt) {
+    const status = h("span", { className: sentAt ? "" : "muted" }, sentAt ? "Sendt " + formatDateTime(sentAt) : "Ikke sendt");
+    const button = h("button", {
+        type: "button",
+        className: "link-button",
+        onClick: async () => {
+            button.disabled = true;
+            button.textContent = "Sender …";
+            try {
+                renderOrder(await api(`/api/admin/orders/${o.id}/mail?type=${type}`, { method: "POST" }));
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = "overdue";
+                button.disabled = false;
+                button.textContent = "Prøv igen";
+            }
+        },
+    }, sentAt ? "Send igen" : "Send nu");
+    return h("span", { className: "mail-status" }, status, button);
 }
 
 /** Opdaterer adressen uden at genindlæse siden, så man kan kopiere et link til fx én bestilling. */

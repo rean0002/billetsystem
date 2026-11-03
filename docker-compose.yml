@@ -25,11 +25,26 @@ services:
       # Bruges kun til at oprette den første admin, hvis der ingen er
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Mails går til Mailpit (se nedenfor), ikke ud på internettet
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_SMTP_AUTH: "false"
+      MAIL_STARTTLS: "false"
+      MAIL_FROM: ${MAIL_FROM:-Billetsystem <billetter@example.com>}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
     ports:
       - "8081:8081"
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # Lokal "mailserver" til udvikling: fanger alle mails, så de kan ses på http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"
 
 volumes:
   db-data:

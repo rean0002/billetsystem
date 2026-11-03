@@ -3,6 +3,7 @@ package dk.billetsystem.controller;
 import dk.billetsystem.dto.OrderRequest;
 import dk.billetsystem.dto.OrderResponse;
 import dk.billetsystem.dto.TicketTypeResponse;
+import dk.billetsystem.mail.OrderMailService;
 import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.TicketType;
@@ -35,13 +36,16 @@ public class PublicController {
     private final OrderService orderService;
     private final EventService eventService;
     private final PaymentSettingsService paymentSettingsService;
+    private final OrderMailService mailService;
 
     public PublicController(TicketService ticketService, OrderService orderService,
-                            EventService eventService, PaymentSettingsService paymentSettingsService) {
+                            EventService eventService, PaymentSettingsService paymentSettingsService,
+                            OrderMailService mailService) {
         this.ticketService = ticketService;
         this.orderService = orderService;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
+        this.mailService = mailService;
     }
 
     /** GET /api/ticket-types/current: de billettyper, der kan købes lige nu, på tværs af events. */
@@ -64,6 +68,6 @@ public class PublicController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse createOrder(@Valid @RequestBody OrderRequest request) {
         CustomerOrder order = orderService.createOrder(request);
-        return OrderResponse.from(order, paymentSettingsService.instructionsFor(order));
+        return OrderResponse.from(order, paymentSettingsService.instructionsFor(order), mailService.isEnabled());
     }
 }
