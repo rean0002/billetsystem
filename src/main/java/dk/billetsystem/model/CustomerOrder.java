@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
@@ -31,6 +32,8 @@ public class CustomerOrder {
     private String email;
     private String phone;
     private String note;
+    // Fulde navne (én pr. linje) på andre med egen billet, som gruppen vil sidde sammen med
+    private String seatWith;
 
     // Gemmes som tekst i databasen ("PENDING", "PAID" ...)
     @Enumerated(EnumType.STRING)
@@ -46,17 +49,20 @@ public class CustomerOrder {
 
     // En bestilling har mange deltagere. "mappedBy" peger på feltet i Participant, der ejer relationen.
     // CascadeType.ALL = når vi gemmer en ordre, gemmes dens deltagere automatisk med.
+    // @OrderBy: deltagerne kommer altid i den rækkefølge, de blev bestilt
     @OneToMany(mappedBy = "customerOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id")
     private List<Participant> participants = new ArrayList<>();
 
     protected CustomerOrder() {
     }
 
-    public CustomerOrder(String contactName, String email, String phone, String note) {
+    public CustomerOrder(String contactName, String email, String phone, String note, String seatWith) {
         this.contactName = contactName;
         this.email = email;
         this.phone = phone;
         this.note = note;
+        this.seatWith = seatWith;
     }
 
     /** Tilføjer en deltager og sørger for, at deltageren også peger tilbage på ordren. */
@@ -83,6 +89,11 @@ public class CustomerOrder {
 
     public String getNote() {
         return note;
+    }
+
+    /** Navnene, gruppen vil sidde sammen med. Tom liste, hvis der ikke er ønsker. */
+    public List<String> getSeatWithNames() {
+        return seatWith == null ? List.of() : List.of(seatWith.split("\n"));
     }
 
     public OrderStatus getStatus() {

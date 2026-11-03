@@ -16,7 +16,7 @@
     <artifactId>billetsystem</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>billetsystem</name>
-    <description>Billetbestilling og admin til en hobbymesse</description>
+    <description>Billetbestilling og admin til events med siddepladser</description>
 
     <properties>
         <java.version>21</java.version>

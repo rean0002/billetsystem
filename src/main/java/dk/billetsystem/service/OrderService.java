@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,7 +50,8 @@ public class OrderService {
                 request.contactName().trim(),
                 request.email().trim(),
                 request.phone(),
-                request.note());
+                request.note(),
+                normalizeNames(request.seatWith()));
 
         int total = 0;
         for (OrderRequest.ParticipantRequest p : request.participants()) {
@@ -58,7 +62,8 @@ public class OrderService {
                         "Billettypen " + p.ticketTypeId() + " findes ikke eller kan ikke købes lige nu");
             }
             // Prisen tages fra databasen, aldrig fra det, hjemmesiden sender
-            order.addParticipant(new Participant(type, p.fullName().trim(), type.getPriceOre()));
+            order.addParticipant(new Participant(type, p.fullName().trim(), type.getPriceOre(),
+                    Boolean.TRUE.equals(p.beginnerTable()), Boolean.TRUE.equals(p.needsTableEnd())));
             total += type.getPriceOre();
         }
         order.setTotalOre(total);
@@ -89,5 +94,20 @@ public class OrderService {
                     : "Der er kun " + seatsLeft + " " + (seatsLeft == 1 ? "plads" : "pladser") + " tilbage til " + event.getName();
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
         }
+    }
+
+    /**
+     * "Anna Andersen, Bente Berg" eller ét navn pr. linje -> ét navn pr. linje, uden tomme linjer og
+     * uden dubletter ("anna andersen" og "Anna Andersen" regnes som samme navn, det første beholdes).
+     * Returnerer null, hvis der ingen navne er.
+     */
+    static String normalizeNames(String names) {
+        if (names == null) return null;
+        Map<String, String> unique = new LinkedHashMap<>();
+        Arrays.stream(names.split("[\\n,;]+"))
+                .map(n -> n.trim().replaceAll("\\s+", " "))
+                .filter(n -> !n.isEmpty())
+                .forEach(n -> unique.putIfAbsent(n.toLowerCase(Locale.ROOT), n));
+        return unique.isEmpty() ? null : String.join("\n", unique.values());
     }
 }

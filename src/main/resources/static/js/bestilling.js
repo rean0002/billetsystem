@@ -77,7 +77,7 @@ function groupByEvent(types) {
     for (const t of types) {
         if (!byId.has(t.eventId)) {
             byId.set(t.eventId, { id: t.eventId, name: t.eventName, startDate: t.eventStartDate,
-                endDate: t.eventEndDate, seatsLeft: t.eventSeatsLeft, types: [] });
+                endDate: t.eventEndDate, seatsLeft: t.eventSeatsLeft, publicInfo: t.eventPublicInfo, types: [] });
         }
         byId.get(t.eventId).types.push(t);
     }
@@ -130,6 +130,10 @@ function selectEvent(id) {
     seats.hidden = selectedEvent.seatsLeft == null || selectedEvent.seatsLeft > 20;
     seats.textContent = `Kun ${selectedEvent.seatsLeft} ${selectedEvent.seatsLeft === 1 ? "plads" : "pladser"} tilbage`;
 
+    // Eventets praktiske info, fx gæstebilletter og åbningstider
+    el("event-info").hidden = !selectedEvent.publicInfo;
+    el("event-info-text").textContent = selectedEvent.publicInfo ?? "";
+
     renderPriceList();
     for (const select of document.querySelectorAll(".participant-type")) {
         fillTypeOptions(select);
@@ -178,7 +182,7 @@ function addParticipant() {
 
     const nameInput = row.querySelector(".participant-name");
     const typeSelect = row.querySelector(".participant-type");
-    const [nameLabel, typeLabel] = row.querySelectorAll("label");
+    const [nameLabel, typeLabel] = row.querySelectorAll(".field label");
 
     // Kobl label og felt sammen, så man kan klikke på teksten, og skærmlæsere læser den op
     nameInput.id = "participant-name-" + id;
@@ -269,6 +273,8 @@ function buildRequest() {
     const participants = [...el("participants").children].map((row) => ({
         fullName: row.querySelector(".participant-name").value.trim(),
         ticketTypeId: Number(row.querySelector(".participant-type").value),
+        beginnerTable: row.querySelector(".participant-beginner").checked,
+        needsTableEnd: row.querySelector(".participant-table-end").checked,
     }));
 
     return {
@@ -276,6 +282,7 @@ function buildRequest() {
         email: value("email"),
         phone: value("phone") || null, // tomme valgfrie felter sendes som null
         note: value("note") || null,
+        seatWith: value("seatWith") || null,
         participants,
     };
 }

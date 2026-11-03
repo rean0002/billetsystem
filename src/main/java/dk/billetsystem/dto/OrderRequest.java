@@ -21,12 +21,16 @@ public record OrderRequest(
         @NotBlank(message = "E-mail mangler") @Email(message = "E-mailen ser ikke rigtig ud") @Size(max = 255) String email,
         @Size(max = 30) String phone,
         String note,
+        // Fulde navne på andre med egen billet, som gruppen vil sidde sammen med (én pr. linje eller kommasepareret)
+        @Size(max = 2000, message = "Maks. 2000 tegn") String seatWith,
         @NotEmpty(message = "Der skal mindst være én deltager") @Size(max = 20, message = "Maks. 20 deltagere pr. bestilling")
         @Valid List<ParticipantRequest> participants
 ) {
     public record ParticipantRequest(
             @NotBlank(message = "Deltagerens fulde navn mangler") @Size(max = 150) String fullName,
-            @NotNull(message = "Billettype mangler") Integer ticketTypeId
+            @NotNull(message = "Billettype mangler") Integer ticketTypeId,
+            Boolean beginnerTable,   // ønsker begynder-/singlebordet
+            Boolean needsTableEnd    // har brug for bordende af helbredsmæssige årsager
     ) {
     }
 }

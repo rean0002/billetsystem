@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Borde · Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/admin/admin.js" defer></script>
+    <script src="/admin/borde.js" defer></script>
+</head>
+<body class="admin">
+
+<!-- Menuen er ens på alle adminsider -->
+<header class="admin-bar">
+    <div class="admin-bar-inner">
+        <a class="brand" href="/admin/index.html">Billetsystem</a>
+        <nav class="admin-nav" aria-label="Adminmenu">
+            <a href="/admin/index.html">Overblik</a>
+            <a href="/admin/bestillinger.html">Bestillinger</a>
+            <a href="/admin/deltagere.html">Deltagere</a>
+            <a href="/admin/borde.html">Borde</a>
+            <a href="/admin/billettyper.html">Billettyper</a>
+            <a href="/admin/events.html">Events</a>
+            <a href="/admin/betaling.html">Betaling</a>
+        </nav>
+        <!-- Alle sider viser tal for det valgte event. Valget huskes i browseren. -->
+        <label class="event-picker">
+            <span>Viser event:</span>
+            <select id="event-select"></select>
+        </label>
+        <!-- Log ud skal være en POST med CSRF-nøgle, ellers kunne en anden side logge dig ud -->
+        <form method="post" action="/admin/logout" class="logout">
+            <span class="whoami" id="whoami"></span>
+            <input type="hidden" id="logout-csrf">
+            <button type="submit" class="link-button">Log ud</button>
+        </form>
+    </div>
+</header>
+
+<main class="page admin-page">
+    <p id="page-error" class="form-error" role="alert" hidden></p>
+
+    <header class="page-header row">
+        <div>
+            <p class="eyebrow">Borde</p>
+            <h1>Pladsønsker</h1>
+            <p class="hint" id="seating-summary"></p>
+        </div>
+        <button type="button" class="button secondary no-print" id="print">Print</button>
+    </header>
+
+    <section class="card">
+        <div class="card-head">
+            <div>
+                <h2>Grupper</h2>
+                <p class="hint">Deltagere på samme bestilling sidder sammen. Navne, de vil sidde med, er slået op blandt deltagerne.</p>
+            </div>
+        </div>
+        <div id="groups" class="group-list"></div>
+    </section>
+
+    <div class="two-col">
+        <section class="card">
+            <h2>Begynder-/singlebord</h2>
+            <ul id="beginner" class="person-list"></ul>
+        </section>
+        <section class="card">
+            <h2>Bordende (helbred)</h2>
+            <p class="hint">Kun til dem, der har brug for det, fx med rollator. Årsagen gemmes ikke.</p>
+            <ul id="table-end" class="person-list"></ul>
+        </section>
+    </div>
+
+</main>
+</body>
+</html>

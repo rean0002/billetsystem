@@ -8,6 +8,7 @@ import dk.billetsystem.dto.EventRequest;
 import dk.billetsystem.dto.OverviewResponse;
 import dk.billetsystem.dto.PaymentSettingsRequest;
 import dk.billetsystem.dto.PaymentSettingsResponse;
+import dk.billetsystem.dto.SeatingResponse;
 import dk.billetsystem.dto.StatusChangeRequest;
 import dk.billetsystem.dto.TicketTypeRequest;
 import dk.billetsystem.model.OrderStatus;
@@ -156,6 +157,14 @@ public class AdminController {
     @GetMapping("/api/admin/participants.csv")
     public ResponseEntity<byte[]> participantsCsv(@RequestParam(required = false) Integer eventId) {
         return csv("deltagerliste", adminOrderService.participantsCsv(eventId));
+    }
+
+    // ---- Borde ----
+
+    /** GET /api/admin/seating?eventId=2: grupper, begynderbord og ønsker om bordende. */
+    @GetMapping("/api/admin/seating")
+    public SeatingResponse seating(@RequestParam(required = false) Integer eventId) {
+        return adminOrderService.seating(eventId);
     }
 
     // ---- Billettyper ----

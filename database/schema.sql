@@ -17,6 +17,7 @@ CREATE TABLE event (
                        start_date       DATE         NOT NULL,
                        end_date         DATE         NOT NULL,
                        max_participants INTEGER CHECK (max_participants IS NULL OR max_participants > 0), -- NULL = ingen grænse
+                       public_info      TEXT,         -- praktisk info på bestillingssiden, fx gæstebilletter og åbningstider
                        CHECK (end_date >= start_date)
 );
 
@@ -48,7 +49,8 @@ CREATE TABLE customer_order (
                                     CHECK (status IN ('PENDING', 'PAID', 'CANCELLED', 'REFUNDED')),
                                 total_ore         INTEGER      NOT NULL CHECK (total_ore >= 0),
                                 stripe_session_id VARCHAR(255) UNIQUE,
-                                note              TEXT,                         -- fx særlige ønsker (bruges især, når bordreservation kommer)
+                                note              TEXT,                         -- besked til arrangørerne
+                                seat_with         TEXT,                         -- fulde navne på andre (med egen billet), gruppen vil sidde med
                                 created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
                                 paid_at           TIMESTAMPTZ
 );
@@ -63,7 +65,9 @@ CREATE TABLE participant (
                              order_id       INTEGER      NOT NULL REFERENCES customer_order(id) ON DELETE CASCADE,
                              ticket_type_id INTEGER      NOT NULL REFERENCES ticket_type(id),
                              full_name      VARCHAR(150) NOT NULL,
-                             price_ore      INTEGER      NOT NULL CHECK (price_ore >= 0)
+                             price_ore      INTEGER      NOT NULL CHECK (price_ore >= 0),
+                             beginner_table  BOOLEAN     NOT NULL DEFAULT FALSE, -- ønsker begynder-/singlebordet
+                             needs_table_end BOOLEAN     NOT NULL DEFAULT FALSE  -- har brug for bordende af helbredsmæssige årsager
 );
 
 -- ---------------------------------------------------------------------
@@ -138,12 +142,15 @@ GROUP BY tt.id, e.name, tt.name;
 -- Testdata (eksempel – ret priser og datoer, så de passer til virkeligheden)
 -- Early bird: 295 kr. minus 100 kr. = 195 kr., 1.-7. oktober 2026.
 -- ---------------------------------------------------------------------
-INSERT INTO event (name, start_date, end_date)
-VALUES ('Hobbymesse april 2027', '2027-04-03', '2027-04-04');
+INSERT INTO event (name, start_date, end_date, public_info)
+VALUES ('Forårsmessen 2027', '2027-04-03', '2027-04-04',
+        'Man kan også komme som gæst uden siddeplads. Gæstebilletten koster 50 kr. og købes i indgangen (kun kontant).
+
+Åbningstider for gæster: lørdag kl. 11.00-18.00 og søndag kl. 10.00-16.00.');
 
 INSERT INTO ticket_type (event_id, name, price_ore, valid_from, valid_to)
 VALUES
-    ((SELECT id FROM event WHERE name = 'Hobbymesse april 2027'),
+    ((SELECT id FROM event WHERE name = 'Forårsmessen 2027'),
      'Early Bird', 19500, '2026-10-01 00:00:00+02', '2026-10-07 23:59:59+02'),
-    ((SELECT id FROM event WHERE name = 'Hobbymesse april 2027'),
+    ((SELECT id FROM event WHERE name = 'Forårsmessen 2027'),
      'Standard',   29500, '2026-10-08 00:00:00+02', NULL);

@@ -44,7 +44,7 @@ async function loadParticipants() {
     document.querySelector("#participants-table tbody").replaceChildren(...participants.map((p) =>
         h("tr", {},
             h("td", { className: "print-only check-col" }, h("span", { className: "checkbox-box" })),
-            h("td", {}, h("strong", {}, p.fullName)),
+            h("td", {}, h("strong", {}, p.fullName), " ", wishTags(p)),
             h("td", {}, p.ticketType),
             h("td", {}, statusBadge(p.orderStatus)),
             h("td", {}, h("a", { href: `/admin/bestillinger.html?id=${p.orderId}` }, "#" + p.orderId),

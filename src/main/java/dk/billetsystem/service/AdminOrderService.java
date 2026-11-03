@@ -2,6 +2,7 @@ package dk.billetsystem.service;
 
 import dk.billetsystem.dto.AdminOrderResponse;
 import dk.billetsystem.dto.AdminParticipantResponse;
+import dk.billetsystem.dto.SeatingResponse;
 import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.OrderStatus;
@@ -17,14 +18,16 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /**
  * Bestillinger og deltagerliste til adminsiden.
  *
- * Søgning og filtrering sker i Java i stedet for i SQL. En hobbymesse har nogle hundrede
+ * Søgning og filtrering sker i Java i stedet for i SQL. Et typisk event har nogle hundrede
  * bestillinger, så det er hurtigt nok og meget enklere. Bliver det til tusindvis, kan det flyttes til SQL.
  */
 @Service
@@ -90,6 +93,52 @@ public class AdminOrderService {
                 .toList();
     }
 
+    /**
+     * Overblik til bordplanen. Navne, som grupper vil sidde med, slås op blandt eventets deltagere,
+     * så arrangørerne kan se, om personen har en billet, og i hvilken bestilling.
+     */
+    @Transactional(readOnly = true)
+    public SeatingResponse seating(Integer eventId) {
+        List<CustomerOrder> active = ordersFor(eventId).stream()
+                .filter(o -> EventService.TAKES_A_SEAT.contains(o.getStatus()))
+                .toList();
+
+        // Navn -> bestilling, til at finde dem, en gruppe vil sidde med
+        Map<String, Integer> orderByName = new HashMap<>();
+        for (CustomerOrder o : active) {
+            for (Participant p : o.getParticipants()) orderByName.putIfAbsent(nameKey(p.getFullName()), o.getId());
+        }
+
+        List<SeatingResponse.Group> groups = active.stream()
+                .filter(o -> o.getParticipants().size() > 1 || !o.getSeatWithNames().isEmpty())
+                // Største grupper først (deltagere + dem, de vil sidde med)
+                .sorted(Comparator.comparingInt((CustomerOrder o) -> o.getParticipants().size() + o.getSeatWithNames().size()).reversed())
+                .map(o -> new SeatingResponse.Group(o.getId(), o.getContactName(), o.getStatus().name(),
+                        o.getParticipants().stream().map(Participant::getFullName).toList(),
+                        o.getSeatWithNames().stream()
+                                .map(n -> new SeatingResponse.Wish(n, orderByName.get(nameKey(n))))
+                                .toList()))
+                .toList();
+
+        List<Participant> all = active.stream().flatMap(o -> o.getParticipants().stream())
+                .sorted(Comparator.comparing(Participant::getFullName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        return new SeatingResponse(groups,
+                all.stream().filter(Participant::isBeginnerTable).map(AdminOrderService::person).toList(),
+                all.stream().filter(Participant::isNeedsTableEnd).map(AdminOrderService::person).toList(),
+                all.size());
+    }
+
+    private static SeatingResponse.Person person(Participant p) {
+        CustomerOrder o = p.getCustomerOrder();
+        return new SeatingResponse.Person(p.getFullName(), o.getId(), o.getStatus().name(), o.getContactName());
+    }
+
+    /** "  anna   ANDERSEN " og "Anna Andersen" skal regnes som samme navn. */
+    private static String nameKey(String name) {
+        return name.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
     // -----------------------------------------------------------------
     // CSV-eksport. Semikolon og "BOM" i starten, så dansk Excel åbner filen med æøå og rigtige kolonner.
     // -----------------------------------------------------------------
@@ -97,13 +146,16 @@ public class AdminOrderService {
     @Transactional(readOnly = true)
     public byte[] participantsCsv(Integer eventId) {
         StringBuilder csv = new StringBuilder();
-        csvLine(csv, "Navn", "Billettype", "Pris (kr.)", "Status", "Bestilling nr.", "Kontaktperson", "E-mail", "Telefon", "Bestilt");
+        csvLine(csv, "Navn", "Billettype", "Pris (kr.)", "Status", "Bestilling nr.", "Kontaktperson", "E-mail", "Telefon", "Bestilt",
+                "Begynder-/singlebord", "Bordende (helbred)", "Vil sidde med");
         participants(eventId, false)
                 .sorted(Comparator.comparing(Participant::getFullName, String.CASE_INSENSITIVE_ORDER))
                 .forEach(p -> {
                     CustomerOrder o = p.getCustomerOrder();
                     csvLine(csv, p.getFullName(), p.getTicketType().getName(), kroner(p.getPriceOre()), danish(o.getStatus()),
-                            String.valueOf(o.getId()), o.getContactName(), o.getEmail(), o.getPhone(), time(o.getCreatedAt()));
+                            String.valueOf(o.getId()), o.getContactName(), o.getEmail(), o.getPhone(), time(o.getCreatedAt()),
+                            p.isBeginnerTable() ? "Ja" : "", p.isNeedsTableEnd() ? "Ja" : "",
+                            String.join(", ", o.getSeatWithNames()));
                 });
         return withBom(csv);
     }

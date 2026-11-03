@@ -55,6 +55,7 @@ function openEventForm(e) {
     document.getElementById("event-start").value = e?.startDate ?? "";
     document.getElementById("event-end").value = e?.endDate ?? "";
     document.getElementById("event-max").value = e?.maxParticipants ?? "";
+    document.getElementById("event-info").value = e?.publicInfo ?? "";
     document.getElementById("event-dialog").showModal();
     document.getElementById("event-name-input").focus();
 }
@@ -69,6 +70,7 @@ async function saveEvent(event) {
         startDate: value("event-start") || null,
         endDate: value("event-end") || null,
         maxParticipants: value("event-max") ? Number(value("event-max")) : null,
+        publicInfo: value("event-info") || null,
     };
 
     const button = document.getElementById("event-save");

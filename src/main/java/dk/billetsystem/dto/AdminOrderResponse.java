@@ -19,6 +19,7 @@ public record AdminOrderResponse(
         String email,
         String phone,
         String note,
+        List<String> seatWith,
         String status,
         int totalOre,
         int ticketCount,
@@ -29,9 +30,11 @@ public record AdminOrderResponse(
         List<ParticipantLine> participants,
         List<String> allowedStatuses
 ) {
-    public record ParticipantLine(Integer id, String fullName, String ticketType, int priceOre) {
+    public record ParticipantLine(Integer id, String fullName, String ticketType, int priceOre,
+                                  boolean beginnerTable, boolean needsTableEnd) {
         static ParticipantLine from(Participant p) {
-            return new ParticipantLine(p.getId(), p.getFullName(), p.getTicketType().getName(), p.getPriceOre());
+            return new ParticipantLine(p.getId(), p.getFullName(), p.getTicketType().getName(), p.getPriceOre(),
+                    p.isBeginnerTable(), p.isNeedsTableEnd());
         }
     }
 
@@ -50,6 +53,7 @@ public record AdminOrderResponse(
                 order.getEmail(),
                 order.getPhone(),
                 order.getNote(),
+                order.getSeatWithNames(),
                 order.getStatus().name(),
                 order.getTotalOre(),
                 order.getParticipants().size(),

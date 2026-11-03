@@ -12,6 +12,7 @@ public record EventRequest(
         @NotBlank(message = "Navn mangler") @Size(max = 100, message = "Maks. 100 tegn") String name,
         @NotNull(message = "Startdato mangler") LocalDate startDate,
         @NotNull(message = "Slutdato mangler") LocalDate endDate,
-        @Positive(message = "Skal være mindst 1, eller tom for ingen grænse") Integer maxParticipants
+        @Positive(message = "Skal være mindst 1, eller tom for ingen grænse") Integer maxParticipants,
+        @Size(max = 2000, message = "Maks. 2000 tegn") String publicInfo
 ) {
 }

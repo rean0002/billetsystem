@@ -17,7 +17,9 @@ public record AdminParticipantResponse(
         String contactName,
         String email,
         String phone,
-        OffsetDateTime orderedAt
+        OffsetDateTime orderedAt,
+        boolean beginnerTable,
+        boolean needsTableEnd
 ) {
     public static AdminParticipantResponse from(Participant p) {
         CustomerOrder o = p.getCustomerOrder();
@@ -32,6 +34,8 @@ public record AdminParticipantResponse(
                 o.getContactName(),
                 o.getEmail(),
                 o.getPhone(),
-                o.getCreatedAt());
+                o.getCreatedAt(),
+                p.isBeginnerTable(),
+                p.isNeedsTableEnd());
     }
 }

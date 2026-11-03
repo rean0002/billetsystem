@@ -11,6 +11,7 @@ public record AdminEventResponse(
         LocalDate startDate,
         LocalDate endDate,
         Integer maxParticipants,
+        String publicInfo,
         long ticketsPaid,
         long ticketsPending,
         long revenuePaidOre,
@@ -18,6 +19,6 @@ public record AdminEventResponse(
 ) {
     public static AdminEventResponse from(Event e, long paid, long pending, long revenue, boolean isDefault) {
         return new AdminEventResponse(e.getId(), e.getName(), e.getStartDate(), e.getEndDate(), e.getMaxParticipants(),
-                paid, pending, revenue, isDefault);
+                e.getPublicInfo(), paid, pending, revenue, isDefault);
     }
 }

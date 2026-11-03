@@ -117,11 +117,14 @@ function renderOrder(o) {
         h("dt", {}, "Reference"), h("dd", {}, "Bestilling " + o.id));
 
     const note = o.note && h("div", { className: "note" }, h("strong", {}, "Besked fra kunden"), h("p", {}, o.note));
+    const seatWith = o.seatWith.length > 0 && h("div", { className: "note" },
+        h("strong", {}, "Vil sidde sammen med"), h("p", {}, o.seatWith.join(", ")),
+        h("a", { href: "/admin/borde.html" }, "Se på bordsiden"));
 
     const participants = h("table", { className: "data-table" },
         h("thead", {}, h("tr", {}, h("th", {}, "Deltager"), h("th", {}, "Billettype"), h("th", { className: "num" }, "Pris"))),
         h("tbody", {}, o.participants.map((p) =>
-            h("tr", {}, h("td", {}, p.fullName), h("td", {}, p.ticketType), h("td", { className: "num" }, formatPrice(p.priceOre))))),
+            h("tr", {}, h("td", {}, p.fullName, " ", wishTags(p)), h("td", {}, p.ticketType), h("td", { className: "num" }, formatPrice(p.priceOre))))),
         h("tfoot", {}, h("tr", { className: "total" }, h("td", { colSpan: 2 }, "I alt"), h("td", { className: "num" }, formatPrice(o.totalOre)))));
 
     const error = h("p", { className: "form-error", role: "alert", hidden: true });
@@ -151,7 +154,7 @@ function renderOrder(o) {
             "før du markerer bestillingen som betalt." +
             (o.overdue ? " Fristen er overskredet: skriv evt. til kunden, eller annullér bestillingen for at frigive pladserne." : ""));
 
-    document.getElementById("dialog-body").replaceChildren(contact, note || "", h("h3", {}, "Deltagere"), participants, error, hint || "", actions);
+    document.getElementById("dialog-body").replaceChildren(contact, note || "", seatWith || "", h("h3", {}, "Deltagere"), participants, error, hint || "", actions);
 }
 
 /** Opdaterer adressen uden at genindlæse siden, så man kan kopiere et link til fx én bestilling. */

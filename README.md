@@ -1,6 +1,6 @@
-# Billetsystem til en hobbymesse
+# Billetsystem
 
-Billetbestilling og adminsystem til en hobbymesse, bygget med Java (Spring Boot) og PostgreSQL.
+Billetbestilling og adminsystem til events med siddepladser, fx messer og workshops, bygget med Java (Spring Boot) og PostgreSQL.
 
 > **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling), bestillingssiden og adminsiden (login, overblik, bestillinger, deltagerliste og billettyper) er på plads. Betaling med Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
 >
@@ -37,6 +37,9 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - **Deltagerliste:** alle deltagere med søgning og filter på billettype, eksport til CSV (åbner direkte i dansk Excel) og en printvenlig tjekind-liste med afkrydsningsfelt til indgangen
 - **Billettyper:** se priser, perioder og salg, opret nye billettyper og ret eksisterende (fx early bird-perioder). Nye priser gælder kun nye bestillinger
 - **Betaling med bankoverførsel/MobilePay:** arrangørerne indtaster kontonummer, evt. MobilePay, betalingsfrist og en besked under "Betaling" på adminsiden. Efter bestilling ser kunden beløb, konto, en reference ("Bestilling 42") og fristen, med en kopiér-knap ved hver værdi. Når pengene er modtaget, markerer arrangørerne bestillingen som betalt. Bestillinger med overskredet frist markeres på adminsiden
+- **Pladsreservation:** ved hver deltager kan man vælge begynder-/singlebordet eller bede om en bordende af helbredsmæssige årsager (kun ja/nej, årsagen gemmes ikke). Deltagere på samme bestilling sidder sammen, og en gruppe kan skrive fulde navne på andre med egen billet, de vil sidde med
+- **Borde (admin):** grupper med de navne, de vil sidde med, slået op blandt deltagerne (navne uden billet markeres), samt lister over begynder-/singlebordet og bordender. Kan printes. Ønskerne står også på deltagerlisten, i bestillingen og i CSV-filen
+- **Praktisk info pr. event**, fx gæstebilletter og åbningstider, vises under "Godt at vide" på bestillingssiden
 - **Events:** opret og ret events (navn, datoer, max antal deltagere). En vælger i menuen bestemmer, hvilket event overblik, bestillinger, deltagere og billettyper viser. Uden valg vises det næste kommende event
 
 ## Datamodel
@@ -53,8 +56,8 @@ erDiagram
 |---|---|
 | `event` | Et event, fx en messe (navn, datoer, evt. max antal deltagere). Der kan være mange |
 | `ticket_type` | Billettyper med pris i øre og gyldighedsperiode |
-| `customer_order` | En bestilling med kontaktperson, status (`PENDING`, `PAID`, `CANCELLED`, `REFUNDED`) og samlet beløb |
-| `participant` | Én række pr. billet med deltagerens fulde navn og den pris, der blev betalt |
+| `customer_order` | En bestilling med kontaktperson, evt. navne gruppen vil sidde med, status (`PENDING`, `PAID`, `CANCELLED`, `REFUNDED`) og samlet beløb |
+| `participant` | Én række pr. billet med deltagerens fulde navn, den pris, der blev betalt, og pladsønsker (begynderbord, bordende) |
 | `payment` | Betalinger fra Stripe (oprettet i databasen, endnu ikke brugt af koden) |
 | `admin_user` | Logins til adminsiden. Kodeord gemmes som BCrypt-hash |
 | `payment_settings` | Betalingsoplysninger (konto, MobilePay, frist, besked). Altid præcis én række |
@@ -70,6 +73,7 @@ Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indt
 - **Prisen kopieres til hver deltager**, så historikken stemmer, selv hvis billetprisen ændres senere.
 - **En bestilling bliver først betalt, når Stripe bekræfter det** (planlagt), ikke fordi brugeren lander på en tak-side.
 - **Databasen styres af `database/schema.sql`.** Hibernate kontrollerer kun ved opstart, at Java-klasserne passer til tabellerne (`ddl-auto=validate`).
+- **Så få følsomme data som muligt.** Bordende af helbredsmæssige årsager gemmes kun som ja/nej, ikke årsagen.
 - **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`, og den første admins kodeord fra `ADMIN_PASSWORD`.
 - **Lukket, medmindre andet er sagt.** `SecurityConfig` lister præcis, hvad besøgende må (bestillingssiden, `GET /api/ticket-types/current`, `POST /api/orders`). Alt andet kræver adminlogin.
 
@@ -112,6 +116,7 @@ docker compose up --build
 
 ```bash
 docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-payment-settings.sql
+docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrations/2026-11-03-pladsreservation.sql
 ```
 
 **Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
@@ -174,10 +179,10 @@ curl http://localhost:8081/api/ticket-types/current
 curl -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
   -d '{
-        "contactName": "Test Testesen",
-        "email": "test@example.com",
+        "contactName": "Lene Mortensen",
+        "email": "lene.mortensen@example.com",
         "participants": [
-          { "fullName": "Anna Andersen", "ticketTypeId": 2 }
+          { "fullName": "Lene Mortensen", "ticketTypeId": 2 }
         ]
       }'
 ```
@@ -192,7 +197,7 @@ Returnerer de billettyper, der kan købes lige nu (slået til, startet og ikke u
 [
   {
     "id": 2,
-    "eventName": "Hobbymesse april 2027",
+    "eventName": "Forårsmessen 2027",
     "name": "Standard",
     "priceOre": 29500,
     "validFrom": "2026-10-07T22:00:00Z",
@@ -220,6 +225,7 @@ Er input ugyldigt, svarer serveren med `400` og en forklaring, fx `{"fejl": "Ugy
 | Endpoint | Hvad |
 |---|---|
 | `GET /api/admin/payment-settings`, `PUT /api/admin/payment-settings` | Hent eller gem betalingsoplysninger |
+| `GET /api/admin/seating?eventId=` | Grupper, begynder-/singlebord og bordender |
 | `GET /api/admin/events` | Alle events med salgstal |
 | `POST /api/admin/events`, `PUT /api/admin/events/{id}` | Opret eller ret et event |
 | `GET /api/admin/overview` | Alle tal til overblikket |
@@ -279,4 +285,4 @@ billetsystem/
 - [x] Betalingsinfo til bankoverførsel og MobilePay med frist
 - [ ] Betaling med Stripe (kort og MobilePay)
 - [ ] Bekræftelsesmail
-- [ ] Bordreservation (inkl. begynderbord) og gæstebilletter
+- [x] Pladsreservation (grupper, begynder-/singlebord, bordende) og info om gæstebilletter

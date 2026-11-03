@@ -33,13 +33,20 @@ public class Participant {
     private String fullName;
     private int priceOre;
 
+    // Pladsønsker. Bordende er kun et ja/nej: årsagen (helbred) gemmes med vilje ikke,
+    // fordi helbredsoplysninger er følsomme persondata.
+    private boolean beginnerTable;
+    private boolean needsTableEnd;
+
     protected Participant() {
     }
 
-    public Participant(TicketType ticketType, String fullName, int priceOre) {
+    public Participant(TicketType ticketType, String fullName, int priceOre, boolean beginnerTable, boolean needsTableEnd) {
         this.ticketType = ticketType;
         this.fullName = fullName;
         this.priceOre = priceOre;
+        this.beginnerTable = beginnerTable;
+        this.needsTableEnd = needsTableEnd;
     }
 
     public Integer getId() {
@@ -65,5 +72,13 @@ public class Participant {
 
     public int getPriceOre() {
         return priceOre;
+    }
+
+    public boolean isBeginnerTable() {
+        return beginnerTable;
+    }
+
+    public boolean isNeedsTableEnd() {
+        return needsTableEnd;
     }
 }

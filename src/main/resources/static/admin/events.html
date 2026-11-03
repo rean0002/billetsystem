@@ -18,6 +18,7 @@
             <a href="/admin/index.html">Overblik</a>
             <a href="/admin/bestillinger.html">Bestillinger</a>
             <a href="/admin/deltagere.html">Deltagere</a>
+            <a href="/admin/borde.html">Borde</a>
             <a href="/admin/billettyper.html">Billettyper</a>
             <a href="/admin/events.html">Events</a>
             <a href="/admin/betaling.html">Betaling</a>
@@ -69,7 +70,7 @@
 
             <div class="field">
                 <label for="event-name-input">Navn</label>
-                <input id="event-name-input" maxlength="100" required placeholder="fx Hobbymesse oktober 2027">
+                <input id="event-name-input" maxlength="100" required placeholder="fx Efterårsmessen 2027">
                 <p class="field-error" data-error-for="name"></p>
             </div>
             <div class="field-row">
@@ -89,6 +90,14 @@
                 <input id="event-max" type="number" min="1" step="1" inputmode="numeric" placeholder="Ingen grænse">
                 <p class="field-error" data-error-for="maxParticipants"></p>
                 <p class="hint">Når grænsen er nået, kan der ikke bestilles flere billetter. Afventende bestillinger optager også en plads.</p>
+            </div>
+
+            <div class="field">
+                <label for="event-info">Praktisk info til kunderne <span class="optional">(valgfri)</span></label>
+                <textarea id="event-info" rows="5" maxlength="2000"
+                          placeholder="fx gæstebilletter, åbningstider og adresse"></textarea>
+                <p class="field-error" data-error-for="publicInfo"></p>
+                <p class="hint">Vises under "Godt at vide" på bestillingssiden.</p>
             </div>
 
             <p id="event-error" class="form-error" role="alert" hidden></p>

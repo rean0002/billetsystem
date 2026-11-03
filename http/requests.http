@@ -6,12 +6,12 @@ POST http://localhost:8081/api/orders
 Content-Type: application/json
 
 {
-  "contactName": "Test Testesen",
-  "email": "test@example.com",
+  "contactName": "Lene Mortensen",
+  "email": "lene.mortensen@example.com",
   "phone": "12345678",
   "participants": [
-    { "fullName": "Anna Andersen", "ticketTypeId": 2 },
-    { "fullName": "Bente Berg", "ticketTypeId": 2 }
+    { "fullName": "Lene Mortensen", "ticketTypeId": 2 },
+    { "fullName": "Tina Kristensen", "ticketTypeId": 2 }
   ]
 }
 
@@ -20,7 +20,7 @@ POST http://localhost:8081/api/orders
 Content-Type: application/json
 
 {
-  "contactName": "Test Testesen",
+  "contactName": "Lene Mortensen",
   "participants": [
     { "fullName": "", "ticketTypeId": 2 }
   ]
@@ -31,9 +31,9 @@ POST http://localhost:8081/api/orders
 Content-Type: application/json
 
 {
-  "contactName": "Test Testesen",
-  "email": "test@example.com",
+  "contactName": "Lene Mortensen",
+  "email": "lene.mortensen@example.com",
   "participants": [
-    { "fullName": "Anna Andersen", "ticketTypeId": 1 }
+    { "fullName": "Lene Mortensen", "ticketTypeId": 1 }
   ]
 }

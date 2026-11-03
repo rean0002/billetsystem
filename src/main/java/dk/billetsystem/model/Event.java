@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 
 /**
- * En messe, fx "Hobbymesse april 2027".
+ * Et event, fx "Forårsmessen 2027".
  * Klassen svarer til tabellen "event" i databasen: én række i tabellen = ét Event-objekt.
  *
  * Spring/Hibernate oversætter automatisk Java-navne til databasenavne,
@@ -28,20 +28,22 @@ public class Event {
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer maxParticipants; // null = ingen grænse
+    private String publicInfo;       // praktisk info på bestillingssiden, fx gæstebilletter og åbningstider
 
     // Hibernate skal bruge en tom konstruktør for at kunne oprette objekter fra databasen
     protected Event() {
     }
 
-    public Event(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants) {
-        update(name, startDate, endDate, maxParticipants);
+    public Event(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants, String publicInfo) {
+        update(name, startDate, endDate, maxParticipants, publicInfo);
     }
 
-    public void update(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants) {
+    public void update(String name, LocalDate startDate, LocalDate endDate, Integer maxParticipants, String publicInfo) {
         this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
         this.maxParticipants = maxParticipants;
+        this.publicInfo = publicInfo;
     }
 
     public Integer getId() {
@@ -62,5 +64,9 @@ public class Event {
 
     public Integer getMaxParticipants() {
         return maxParticipants;
+    }
+
+    public String getPublicInfo() {
+        return publicInfo;
     }
 }

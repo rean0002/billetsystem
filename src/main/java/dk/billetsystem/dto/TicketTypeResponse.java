@@ -23,6 +23,7 @@ public record TicketTypeResponse(
         String eventName,
         LocalDate eventStartDate,
         LocalDate eventEndDate,
+        String eventPublicInfo,
         Long eventSeatsLeft
 ) {
     public static TicketTypeResponse from(TicketType t, Long seatsLeft) {
@@ -37,6 +38,7 @@ public record TicketTypeResponse(
                 e.getName(),
                 e.getStartDate(),
                 e.getEndDate(),
+                e.getPublicInfo(),
                 seatsLeft);
     }
 }

@@ -14,7 +14,7 @@
 
     <header class="page-header">
         <p class="eyebrow">Billetbestilling</p>
-        <h1 id="event-name">Hobbymessen</h1>
+        <h1 id="event-name">Bestil billetter</h1>
         <p id="event-dates" class="hint"></p>
     </header>
 
@@ -42,13 +42,33 @@
             <ul id="price-list" class="price-list"></ul>
         </section>
 
+        <!-- Eventets praktiske info, fx gæstebilletter og åbningstider. Udfyldes af bestilling.js -->
+        <section id="event-info" class="card" hidden>
+            <h2>Godt at vide</h2>
+            <p id="event-info-text" class="event-info-text"></p>
+        </section>
+
         <section class="card">
             <h2>Deltagere</h2>
-            <p class="hint">Én billet pr. deltager. Skriv det fulde navn, som det skal stå på deltagerlisten.</p>
+            <p class="hint">Én billet pr. deltager. Skriv det fulde navn, som det skal stå på deltagerlisten (ikke kælenavne).
+                Deltagere på samme bestilling sidder sammen.</p>
 
             <ol id="participants" class="participants"></ol>
 
             <button type="button" id="add-participant" class="button secondary">+ Tilføj deltager</button>
+        </section>
+
+        <section class="card">
+            <h2>Pladsreservation <span class="optional">(valgfri)</span></h2>
+            <p class="hint">Vil I sidde sammen med nogen, der har købt billet for sig selv? Skriv deres fulde navne,
+                ét pr. linje. Kun én i gruppen behøver at skrive det.</p>
+            <div class="field">
+                <label for="seatWith">Vi vil gerne sidde sammen med</label>
+                <textarea id="seatWith" name="seatWith" rows="3" maxlength="2000" placeholder="fx Bente Berg&#10;Camilla Carlsen"></textarea>
+                <p class="field-error" data-error-for="seatWith"></p>
+            </div>
+            <p class="hint">Vi prøver at opfylde alles ønsker. Der er et begynder-/singlebord, som du kan vælge ved hver deltager.
+                Bordender er der få af, så dem kan vi kun give til dem, der har brug for det af helbredsmæssige årsager, fx hvis man har rollator med.</p>
         </section>
 
         <section class="card">
@@ -117,6 +137,10 @@
                 <label>Billettype</label>
                 <select class="participant-type" required></select>
                 <p class="field-error"></p>
+            </div>
+            <div class="participant-wishes">
+                <label class="checkbox"><input type="checkbox" class="participant-beginner"> Begynder-/singlebord</label>
+                <label class="checkbox"><input type="checkbox" class="participant-table-end"> Har brug for bordende af helbredsmæssige årsager</label>
             </div>
             <button type="button" class="remove-participant" aria-label="Fjern deltager">Fjern</button>
         </li>

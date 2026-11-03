@@ -39,10 +39,18 @@ function h(tag, props = {}, ...children) {
         else if (key in element) element[key] = value;
         else element.setAttribute(key, value);
     }
-    for (const child of children.flat()) {
+    for (const child of children.flat(Infinity)) {
         if (child != null && child !== false) element.append(child instanceof Node ? child : String(child));
     }
     return element;
+}
+
+/** Små mærker for en deltagers pladsønsker, fx på deltagerlisten. */
+function wishTags(p) {
+    return [
+        p.beginnerTable && h("span", { className: "wish-tag" }, "Begynderbord"),
+        p.needsTableEnd && h("span", { className: "wish-tag" }, "Bordende"),
+    ];
 }
 
 /** Et lille farvet mærke med status. Teksten står altid ved siden af farven. */

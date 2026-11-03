@@ -15,7 +15,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 /**
- * Events, fx "Hobbymesse april 2027" og "Hobbymesse oktober 2027".
+ * Events, fx "Forårsmessen 2027" og "Efterårsmessen 2027".
  * Hver billettype hører til ét event, og en bestilling indeholder billetter til ét event.
  */
 @Service
@@ -71,15 +71,21 @@ public class EventService {
     @Transactional
     public Event create(EventRequest request) {
         validate(request);
-        return eventRepository.save(new Event(request.name().trim(), request.startDate(), request.endDate(), request.maxParticipants()));
+        return eventRepository.save(new Event(request.name().trim(), request.startDate(), request.endDate(),
+                request.maxParticipants(), blankToNull(request.publicInfo())));
     }
 
     @Transactional
     public Event update(int id, EventRequest request) {
         validate(request);
         Event event = get(id);
-        event.update(request.name().trim(), request.startDate(), request.endDate(), request.maxParticipants());
+        event.update(request.name().trim(), request.startDate(), request.endDate(),
+                request.maxParticipants(), blankToNull(request.publicInfo()));
         return event;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     // Samme regel som CHECK (end_date >= start_date) i databasen, men med en læsbar fejlbesked
