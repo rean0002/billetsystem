@@ -1,0 +1,291 @@
+/* Farver samlet ét sted, så de er nemme at ændre */
+:root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --text: #1f2a2e;
+    --muted: #5d6a6f;
+    --border: #dcd8cf;
+    --accent: #2f6b5a;
+    --accent-hover: #24574a;
+    --accent-soft: #e4efeb;
+    --error: #b3261e;
+    --error-soft: #fbeaea;
+    --radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+}
+
+.page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+}
+
+.page-header {
+    margin-bottom: 24px;
+}
+
+.eyebrow {
+    margin: 0;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+h1 {
+    margin: 4px 0 0;
+    font-size: clamp(1.7rem, 5vw, 2.3rem);
+    line-height: 1.2;
+}
+
+h2 {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.hint,
+.status {
+    margin: 0 0 16px;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+/* ---- Priser ---- */
+
+.price-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.price-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+}
+
+.price-list li:first-child {
+    border-top: none;
+}
+
+.price-list small {
+    display: block;
+    color: var(--muted);
+}
+
+/* ---- Felter ---- */
+
+.field {
+    margin-bottom: 14px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 4px;
+}
+
+.optional {
+    font-weight: 400;
+    color: var(--muted);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+[aria-invalid="true"] {
+    border-color: var(--error);
+    background: var(--error-soft);
+}
+
+.field-error {
+    margin: 4px 0 0;
+    color: var(--error);
+    font-size: 0.88rem;
+}
+
+.field-error:empty {
+    display: none;
+}
+
+/* ---- Deltagere ---- */
+
+.participants {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    counter-reset: participant;
+}
+
+.participant {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 12px;
+    padding: 16px 0 4px;
+    border-top: 1px solid var(--border);
+    counter-increment: participant;
+}
+
+.participant:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+/* "Deltager 1", "Deltager 2" ... skrives automatisk af CSS */
+.participant::before {
+    content: "Deltager " counter(participant);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+}
+
+.remove-participant {
+    position: absolute;
+    top: 12px;
+    right: 0;
+    border: none;
+    background: none;
+    color: var(--error);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.participant:first-child .remove-participant {
+    top: -4px;
+}
+
+.remove-participant:hover {
+    text-decoration: underline;
+}
+
+@media (min-width: 560px) {
+    .participant {
+        grid-template-columns: 3fr 2fr;
+    }
+
+    .participant::before {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ---- Knapper ---- */
+
+.button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 12px 18px;
+    cursor: pointer;
+}
+
+.button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.button.primary {
+    width: 100%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.05rem;
+}
+
+.button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.button.secondary {
+    border: 1px dashed var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* ---- Total og beskeder ---- */
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.2rem;
+}
+
+.total-row strong {
+    font-size: 1.5rem;
+}
+
+.summary .hint {
+    margin-top: 2px;
+}
+
+.form-error {
+    margin: 0 0 16px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+.notice {
+    text-align: center;
+}
+
+.confirmation {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.confirmation:focus {
+    outline: none;
+}
+
+[hidden] {
+    display: none !important;
+}

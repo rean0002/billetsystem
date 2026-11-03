@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bestil billetter</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- defer: scriptet køres først, når hele siden er indlæst -->
+    <script src="js/bestilling.js" defer></script>
+</head>
+<body>
+<main class="page">
+
+    <header class="page-header">
+        <p class="eyebrow">Billetbestilling</p>
+        <h1 id="event-name">Hobbymessen</h1>
+    </header>
+
+    <!-- Vises, mens billettyperne hentes -->
+    <p id="loading" class="status">Henter billetter …</p>
+
+    <!-- Vises, hvis der ingen billetter er, eller serveren ikke svarer -->
+    <section id="unavailable" class="card notice" hidden>
+        <h2>Ingen billetter lige nu</h2>
+        <p id="unavailable-text">Der er ingen billetter til salg i øjeblikket. Kig forbi igen senere.</p>
+    </section>
+
+    <!-- Selve bestillingen -->
+    <form id="order-form" hidden>
+
+        <section class="card">
+            <h2>Billetpriser</h2>
+            <ul id="price-list" class="price-list"></ul>
+        </section>
+
+        <section class="card">
+            <h2>Deltagere</h2>
+            <p class="hint">Én billet pr. deltager. Skriv det fulde navn, som det skal stå på deltagerlisten.</p>
+
+            <ol id="participants" class="participants"></ol>
+
+            <button type="button" id="add-participant" class="button secondary">+ Tilføj deltager</button>
+        </section>
+
+        <section class="card">
+            <h2>Kontaktoplysninger</h2>
+            <p class="hint">Vi sender bekræftelsen hertil.</p>
+
+            <div class="field">
+                <label for="contactName">Navn</label>
+                <input id="contactName" name="contactName" autocomplete="name" maxlength="150" required>
+                <p class="field-error" data-error-for="contactName"></p>
+            </div>
+
+            <div class="field">
+                <label for="email">E-mail</label>
+                <input id="email" name="email" type="email" autocomplete="email" maxlength="255" required>
+                <p class="field-error" data-error-for="email"></p>
+            </div>
+
+            <div class="field">
+                <label for="phone">Telefon <span class="optional">(valgfri)</span></label>
+                <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30">
+                <p class="field-error" data-error-for="phone"></p>
+            </div>
+
+            <div class="field">
+                <label for="note">Besked til arrangørerne <span class="optional">(valgfri)</span></label>
+                <textarea id="note" name="note" rows="3"></textarea>
+            </div>
+        </section>
+
+        <section class="card summary">
+            <div class="total-row">
+                <span>I alt</span>
+                <strong id="total" aria-live="polite">0,00 kr.</strong>
+            </div>
+            <p class="hint">Den endelige pris beregnes, når du bestiller.</p>
+
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+
+            <button type="submit" id="submit" class="button primary">Bestil billetter</button>
+        </section>
+    </form>
+
+    <!-- Vises, når bestillingen er oprettet -->
+    <section id="confirmation" class="card confirmation" hidden tabindex="-1">
+        <h2>Tak for din bestilling!</h2>
+        <p>Bestillingsnummer: <strong id="confirm-id"></strong></p>
+        <p>Beløb: <strong id="confirm-total"></strong></p>
+        <p>Deltagere:</p>
+        <ul id="confirm-names"></ul>
+        <p class="hint">Din bestilling er registreret, men endnu ikke betalt. Du får besked om betaling.</p>
+    </section>
+
+    <!-- Skabelon til én deltager. JavaScript kopierer den, hver gang man trykker "Tilføj deltager". -->
+    <template id="participant-template">
+        <li class="participant">
+            <div class="field">
+                <label>Fulde navn</label>
+                <input class="participant-name" maxlength="150" autocomplete="off" required>
+                <p class="field-error"></p>
+            </div>
+            <div class="field">
+                <label>Billettype</label>
+                <select class="participant-type" required></select>
+                <p class="field-error"></p>
+            </div>
+            <button type="button" class="remove-participant" aria-label="Fjern deltager">Fjern</button>
+        </li>
+    </template>
+
+</main>
+</body>
+</html>

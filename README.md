@@ -2,7 +2,7 @@
 
 Billetbestilling og adminsystem til en hobbymesse, bygget med Java (Spring Boot) og PostgreSQL.
 
-> **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling) er på plads. Adminside, betaling og bestillingsside er endnu ikke lavet. Se [roadmap](#roadmap).
+> **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling) og bestillingssiden er på plads. Adminside og betaling er endnu ikke lavet. Se [roadmap](#roadmap).
 >
 > Dette er et hobbyprojekt.
 
@@ -20,11 +20,12 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 | Backend | Java 21, Spring Boot 3.5 (Spring Web, Spring Data JPA, Bean Validation) |
 | Database | PostgreSQL |
 | Udviklingsmiljø | Docker Compose |
-| Frontend | HTML og JavaScript (planlagt) |
+| Frontend | HTML, CSS og JavaScript uden framework (serveres af Spring Boot fra `src/main/resources/static`) |
 | Betaling | Stripe Checkout med kort og MobilePay (planlagt) |
 
 ## Hvad der virker nu
 
+- Bestillingsside på http://localhost:8081, hvor man tilføjer deltagere, vælger billettype, ser totalen og bestiller. Fejl fra serveren vises ved det felt, de hører til
 - Billettyper med pris og gyldighedsperiode, så fx early bird skifter automatisk til normalpris på en bestemt dato
 - `GET /api/ticket-types/current` viser de billetter, der kan købes lige nu
 - `POST /api/orders` opretter en bestilling med flere deltagere. Prisen beregnes på serveren, og inputtet valideres
@@ -213,7 +214,8 @@ billetsystem/
    │  ├─ controller/             REST-API og fejlhåndtering
    │  └─ dto/                    objekter til ind- og udgående JSON
    └─ resources/
-      └─ application.properties
+      ├─ application.properties
+      └─ static/                 bestillingssiden (index.html, css/, js/)
 ```
 
 ## Roadmap
@@ -221,10 +223,10 @@ billetsystem/
 - [x] Databaseskema i PostgreSQL
 - [x] Hent billettyper, der kan købes nu
 - [x] Opret bestilling med serverberegnet pris og validering
+- [x] Bestillingsside i HTML og JavaScript
 - [ ] Adminlogin (Spring Security)
 - [ ] Deltagerliste, salgstal og eksport til CSV
 - [ ] Administration af billettyper og early bird-perioder
 - [ ] Betaling med Stripe (kort og MobilePay)
-- [ ] Bestillingsside i HTML og JavaScript
 - [ ] Bekræftelsesmail
 - [ ] Bordreservation (inkl. begynderbord) og gæstebilletter
