@@ -1581,3 +1581,9 @@ a.notice-warn:hover {
         break-inside: avoid;
     }
 }
+
+/* Clerks login-formular centreret på login-siden */
+.clerk-sign-in {
+    display: flex;
+    justify-content: center;
+}

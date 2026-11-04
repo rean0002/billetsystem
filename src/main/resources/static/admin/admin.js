@@ -1,6 +1,6 @@
 /*
- * Fælles kode for alle adminsider: login-tjek, menu, log ud, kald til API'et og formatering.
- * Filen ligger under /admin, så man kun kan hente den, når man er logget ind.
+ * Fælles kode for alle adminsider: login-tjek (via Clerk), menu, log ud, kald til API'et og formatering.
+ * Filerne er offentlige, men alle data hentes fra /api/admin, som kræver et gyldigt Clerk-token med admin-rolle.
  * Hver side har derudover sit eget script (overblik.js, bestillinger.js ...).
  */
 
@@ -11,7 +11,7 @@ const STATUS_LABELS = {
     REFUNDED: "Refunderet",
 };
 
-let csrf = null;           // hentes ved opstart og sendes med alle POST/PUT-kald
+let clerk = null;          // Clerk (login), indlæses ved opstart
 let events = [];           // alle events, til vælgeren i menuen
 let currentEventId = null; // det event, siderne viser tal for
 const EVENT_STORAGE_KEY = "billetsystem.admin.eventId";
@@ -59,8 +59,22 @@ function statusBadge(status) {
 }
 
 /**
+ * Henter fra admin-API'et med Clerks token i headeren "Authorization: Bearer ...".
+ * Clerk fornyer tokenet selv, når det er ved at udløbe (det gælder kun ca. et minut ad gangen).
+ * Uden gyldigt login (401) eller uden admin-rolle (403) sendes man til login-siden.
+ */
+async function authorizedFetch(url, options = {}) {
+    const token = await clerk.session?.getToken();
+    const response = await fetch(url, { ...options, headers: { ...options.headers, Authorization: "Bearer " + token } });
+    if (response.status === 401 || response.status === 403) {
+        location.href = "/admin/login.html" + (response.status === 403 ? "?forbidden" : "");
+        throw new Error("Ikke logget ind som admin");
+    }
+    return response;
+}
+
+/**
  * Kalder API'et og returnerer JSON.
- * Er man ikke logget ind (fx fordi sessionen er udløbet), sendes man til login-siden.
  * Fejl fra serveren kastes som en Error med serverens besked, så siden kan vise den.
  */
 async function api(url, { method = "GET", body } = {}) {
@@ -69,13 +83,8 @@ async function api(url, { method = "GET", body } = {}) {
         options.headers["Content-Type"] = "application/json";
         options.body = JSON.stringify(body);
     }
-    if (method !== "GET") options.headers[csrf.headerName] = csrf.token;
 
-    const response = await fetch(url, options);
-    if (response.status === 401) {
-        location.href = "/admin/login.html";
-        throw new Error("Ikke logget ind");
-    }
+    const response = await authorizedFetch(url, options);
     const data = await response.json().catch(() => null);
     if (!response.ok) {
         const error = new Error(data?.fejl ?? "Noget gik galt (" + response.status + ")");
@@ -142,6 +151,22 @@ function renderEventPicker() {
     });
 }
 
+/**
+ * Henter en fil (fx CSV) med token og gemmer den. Et almindeligt link kan ikke sende tokenet med,
+ * så links med data-event-link hentes på denne måde i stedet.
+ */
+async function downloadFile(url) {
+    const response = await authorizedFetch(url);
+    if (!response.ok) throw new Error("Filen kunne ikke hentes (" + response.status + ")");
+    // Filnavnet står i headeren Content-Disposition, fx attachment; filename="deltagerliste-2026-11-04.csv"
+    const filename = response.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "download.csv";
+    const link = h("a", { href: URL.createObjectURL(await response.blob()), download: filename });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+}
+
 /** Vises, hvis en side ikke kan hente sine data. */
 function showPageError(message) {
     const box = document.getElementById("page-error");
@@ -150,27 +175,41 @@ function showPageError(message) {
 }
 
 /**
- * Køres af hver side ved opstart: tjekker login, viser brugernavn og gør log ud klar.
- * Returnerer et promise, så siden kan vente på, at csrf er klar.
+ * Køres af hver side ved opstart: tjekker login, viser brugeren og gør log ud klar.
+ * Returnerer et promise, så siden kan vente på, at login og events er klar.
  */
 const adminReady = (async () => {
     await new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
 
-    const [me, token, eventList] = await Promise.all([api("/api/admin/me"), api("/api/csrf"), api("/api/admin/events")]);
-    csrf = token;
+    try {
+        clerk = await loadClerk();
+    } catch (err) {
+        showPageError(err.message);
+        throw err;
+    }
+    if (!clerk.user) {
+        location.href = "/admin/login.html";
+        throw new Error("Ikke logget ind");
+    }
+
+    // /api/admin/me svarer 403, hvis brugeren ikke har admin-rollen. Så sendes man til login-siden med en forklaring.
+    const [, eventList] = await Promise.all([api("/api/admin/me"), api("/api/admin/events")]);
     events = eventList;
     currentEventId = chooseEvent();
     renderEventPicker();
 
-    // Links som "Hent som Excel" skal hente data for det valgte event
+    // Links som "Hent som Excel" skal hente data for det valgte event, med token
     for (const link of document.querySelectorAll("a[data-event-link]")) {
         link.href = withEvent(link.getAttribute("href"));
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            downloadFile(link.href).catch((err) => showPageError(err.message));
+        });
     }
 
-    document.getElementById("whoami").textContent = me.username;
-    const field = document.getElementById("logout-csrf");
-    field.name = csrf.parameterName;
-    field.value = csrf.token;
+    document.getElementById("whoami").textContent = clerk.user.primaryEmailAddress?.emailAddress ?? "";
+    document.getElementById("logout").addEventListener("click", () =>
+        clerk.signOut({ redirectUrl: "/admin/login.html?logout" }));
 
     // Markér den side, man står på, i menuen
     for (const link of document.querySelectorAll(".admin-nav a")) {

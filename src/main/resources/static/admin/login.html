@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin-login</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/clerk.js" defer></script>
     <script src="/js/login.js" defer></script>
 </head>
 <body>
@@ -17,28 +18,17 @@
 
     <p id="logged-out" class="card notice-ok" role="status" hidden>Du er logget ud.</p>
 
-    <!-- Formularen sendes direkte til Spring Security, som tjekker brugernavn og kodeord -->
-    <form id="login-form" class="card" method="post" action="/admin/login">
-        <p id="login-error" class="form-error" role="alert" hidden>Forkert brugernavn eller kodeord.</p>
-        <p id="login-locked" class="form-error" role="alert" hidden>
-            For mange forkerte forsøg. Af sikkerhedshensyn er login spærret i 15 minutter. Prøv igen senere.
-        </p>
+    <!-- Logget ind, men uden admin-rolle i Clerk -->
+    <section id="forbidden" class="card" hidden>
+        <p class="form-error" role="alert">Din konto har ikke adgang til adminsiden. Bed en arrangør om at give dig adgang.</p>
+        <p class="hint" id="forbidden-user"></p>
+        <button type="button" class="button secondary" id="sign-out">Log ud</button>
+    </section>
 
-        <div class="field">
-            <label for="username">Brugernavn</label>
-            <input id="username" name="username" autocomplete="username" required autofocus>
-        </div>
+    <p id="login-error" class="form-error" role="alert" hidden></p>
 
-        <div class="field">
-            <label for="password">Kodeord</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required>
-        </div>
-
-        <!-- CSRF-nøglen udfyldes af login.js -->
-        <input type="hidden" id="csrf">
-
-        <button type="submit" id="login-button" class="button primary" disabled>Log ind</button>
-    </form>
+    <!-- Clerks login-formular indsættes her af login.js -->
+    <div id="clerk-sign-in" class="clerk-sign-in"></div>
 
 </main>
 </body>

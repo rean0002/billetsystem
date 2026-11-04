@@ -52,10 +52,16 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Adminlogin: kodeord-hashing, login-session og adgangsregler -->
+        <!-- Adgangsregler -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Adminlogin via Clerk: tjekker Clerks login-token (JWT) med Clerks offentlige nøgler -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
         <dependency>

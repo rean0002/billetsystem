@@ -3,14 +3,10 @@ package dk.billetsystem.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.time.Clock;
 
@@ -18,63 +14,46 @@ import java.time.Clock;
  * Adgangsreglerne for hele programmet.
  *
  * Princippet er "lukket, medmindre andet er sagt": vi skriver præcis, hvad besøgende må,
- * og alt andet kræver, at man er logget ind som admin.
+ * og alt andet afvises. Admin-API'et kræver et gyldigt token fra Clerk med rollen admin (se ClerkConfig).
  */
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, LoginAttemptService loginAttempts) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Afviser login-forsøg, mens brugernavnet eller IP-adressen er låst efter for mange forkerte kodeord
-                .addFilterBefore(new LoginThrottleFilter(loginAttempts), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Bestillingssiden og dens filer
                         .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/fonts/**", "/favicon.ico").permitAll()
+                        // Adminsidernes HTML og JavaScript indeholder ingen data, så de må hentes uden login.
+                        // Alle data hentes via /api/admin, som kræver login (og uden login sendes man til login-siden).
+                        .requestMatchers("/admin", "/admin/", "/admin/**").permitAll()
                         // Det offentlige API
-                        .requestMatchers(HttpMethod.GET, "/api/ticket-types/**", "/api/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/ticket-types/**", "/api/clerk-config").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
-                        // Login-siden skal man kunne se uden at være logget ind
-                        .requestMatchers("/admin/login.html").permitAll()
-                        // Springs egen fejlside, så fejl ikke bliver sendt videre til login
+                        // Springs egen fejlside
                         .requestMatchers("/error").permitAll()
-                        // Alt andet: kun admins
-                        .anyRequest().hasRole("ADMIN"))
+                        // Admin-API'et: kun arrangører med rollen admin i Clerk
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Alt andet afvises
+                        .anyRequest().denyAll())
 
-                .formLogin(form -> form
-                        .loginPage("/admin/login.html")       // vores egen login-side
-                        .loginProcessingUrl("/admin/login")   // formularen sendes hertil, Spring tjekker kodeordet
-                        .defaultSuccessUrl("/admin/index.html", true)
-                        .failureUrl("/admin/login.html?error")
-                        .permitAll())
+                // Tjek Clerks token i "Authorization: Bearer ..." (uden token: 401, uden admin-rolle: 403)
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(new ClerkRoleConverter())))
 
-                .logout(logout -> logout
-                        .logoutUrl("/admin/logout")
-                        .logoutSuccessUrl("/admin/login.html?logout"))
+                // Serveren husker ikke, hvem der er logget ind (ingen session-cookie). Hvert kald har sit eget token.
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // CSRF-beskyttelse forhindrer andre hjemmesider i at sende formularer i en indlogget admins navn.
-                // POST /api/orders er offentlig og bruger ikke login, så den behøver ikke beskyttelsen.
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/orders")))
-
-                // Kalder man /api/... uden at være logget ind, får man 401 i stedet for at blive sendt til login-siden.
-                // Det er nemmere at håndtere i JavaScript.
-                .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                        PathPatternRequestMatcher.withDefaults().matcher("/api/**")));
+                // CSRF-beskyttelse er ikke nødvendig: admin-API'et bruger et token i en header, som en anden
+                // hjemmeside ikke kan få browseren til at sende med (i modsætning til en cookie).
+                .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
 
-    /** Uret, LoginAttemptService bruger. (I testene bruges et ur, man selv kan stille frem.) */
+    /** Uret, fx OrderRateLimiter og UnpaidOrderExpiryJob bruger. (I testene bruges et ur, man selv kan stille frem.) */
     @Bean
     public Clock clock() {
         return Clock.systemUTC();
-    }
-
-    /** BCrypt laver en ny, tilfældig "salt" for hvert kodeord, så to ens kodeord får forskellige hashes. */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }

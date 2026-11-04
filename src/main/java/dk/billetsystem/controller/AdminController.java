@@ -12,6 +12,7 @@ import dk.billetsystem.dto.SeatingResponse;
 import dk.billetsystem.dto.StatusChangeRequest;
 import dk.billetsystem.dto.TicketTypeRequest;
 import dk.billetsystem.model.OrderStatus;
+import dk.billetsystem.security.ClerkConfig;
 import dk.billetsystem.service.AdminOrderService;
 import dk.billetsystem.service.EventService;
 import dk.billetsystem.service.PaymentSettingsService;
@@ -23,8 +24,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Endpoints til login og adminsiden. Alt under /api/admin kræver login (se SecurityConfig).
+ * Endpoints til login og adminsiden. Alt under /api/admin kræver login via Clerk med rollen admin (se SecurityConfig).
  *
  * De fleste endpoints tager ?eventId=. Uden den bruges det næste kommende event.
  */
@@ -52,31 +52,32 @@ public class AdminController {
     private final TicketService ticketService;
     private final EventService eventService;
     private final PaymentSettingsService paymentSettingsService;
+    private final ClerkConfig clerkConfig;
 
     public AdminController(AdminOrderService adminOrderService, StatisticsService statisticsService,
                            TicketService ticketService, EventService eventService,
-                           PaymentSettingsService paymentSettingsService) {
+                           PaymentSettingsService paymentSettingsService, ClerkConfig clerkConfig) {
         this.adminOrderService = adminOrderService;
         this.statisticsService = statisticsService;
         this.ticketService = ticketService;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
+        this.clerkConfig = clerkConfig;
+    }
+
+    /** GET /api/clerk-config: den offentlige Clerk-nøgle, som login- og adminsiden skal bruge. */
+    @GetMapping("/api/clerk-config")
+    public Map<String, String> clerkConfig() {
+        return Map.of("publishableKey", clerkConfig.publishableKey());
     }
 
     /**
-     * GET /api/csrf: giver login- og adminsiden den CSRF-nøgle, de skal sende med.
-     * Formularer sender den som et felt (parameterName), JavaScript som en header (headerName).
-     * (En almindelig HTML-fil kan ikke selv kende nøglen, så den henter den her.)
+     * GET /api/admin/me: er man logget ind som admin? Adminsiden kalder den først,
+     * så den kan sende folk uden adgang til login-siden med en forklaring (401 eller 403).
      */
-    @GetMapping("/api/csrf")
-    public Map<String, String> csrf(CsrfToken token) {
-        return Map.of("parameterName", token.getParameterName(), "headerName", token.getHeaderName(), "token", token.getToken());
-    }
-
-    /** GET /api/admin/me: hvem er logget ind? */
     @GetMapping("/api/admin/me")
-    public Map<String, String> me(@AuthenticationPrincipal UserDetails user) {
-        return Map.of("username", user.getUsername());
+    public Map<String, String> me(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of("userId", jwt.getSubject());
     }
 
     /** GET /api/admin/overview?eventId=2: alle tal til forsiden. */

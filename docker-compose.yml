@@ -22,12 +22,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/billetsystem
       DB_PASSWORD: ${DB_PASSWORD}
-      # Bruges kun til at oprette den første admin, hvis der ingen er
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Login på adminsiden via Clerk (se README). Nøglen er offentlig, men hører til jeres egen Clerk-app.
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-http://localhost:8081}
       # Mails går til Mailpit (se nedenfor), ikke ud på internettet
-      # Lokalt køres der http, ikke https, så session-cookien må ikke kræve https
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       MAIL_SMTP_AUTH: "false"

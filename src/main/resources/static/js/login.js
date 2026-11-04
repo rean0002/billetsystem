@@ -1,29 +1,37 @@
 /*
- * Login-siden. Selve login klares af Spring Security. Scriptet sørger kun for to ting:
- *   1. at hente CSRF-nøglen, som formularen skal sende med
- *   2. at vise en besked, hvis login fejlede, var spærret, eller man lige er logget ud
+ * Login-siden. Selve login klares af Clerk (kodeord, spærring ved gætteri osv.).
+ * Scriptet viser Clerks login-formular og sender arrangøren videre til adminsiden bagefter.
+ *
+ * Adressen kan have ?logout (lige logget ud) eller ?forbidden (logget ind, men uden admin-rolle).
  */
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Spring sender os tilbage med ?error, ?locked eller ?logout i adressen
     const params = new URLSearchParams(location.search);
-    document.getElementById("login-error").hidden = !params.has("error");
-    document.getElementById("login-locked").hidden = !params.has("locked");
     document.getElementById("logged-out").hidden = !params.has("logout");
 
+    let clerk;
     try {
-        const response = await fetch("/api/csrf");
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const csrf = await response.json();
-
-        const field = document.getElementById("csrf");
-        field.name = csrf.parameterName;
-        field.value = csrf.token;
-        document.getElementById("login-button").disabled = false;
+        clerk = await loadClerk();
     } catch (err) {
-        console.error(err);
         const error = document.getElementById("login-error");
-        error.textContent = "Kan ikke få forbindelse til serveren. Genindlæs siden og prøv igen.";
+        error.textContent = err.message;
         error.hidden = false;
+        return;
     }
+
+    if (clerk.user && params.has("forbidden")) {
+        document.getElementById("forbidden-user").textContent =
+            "Logget ind som " + (clerk.user.primaryEmailAddress?.emailAddress ?? clerk.user.id);
+        document.getElementById("sign-out").addEventListener("click", () =>
+            clerk.signOut({ redirectUrl: "/admin/login.html?logout" }));
+        document.getElementById("forbidden").hidden = false;
+        return;
+    }
+
+    if (clerk.user) {
+        location.href = "/admin/index.html"; // allerede logget ind
+        return;
+    }
+
+    clerk.mountSignIn(document.getElementById("clerk-sign-in"), { forceRedirectUrl: "/admin/index.html" });
 });

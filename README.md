@@ -2,7 +2,7 @@
 
 Billetbestilling og adminsystem til events med siddepladser, fx messer og workshops, bygget med Java (Spring Boot) og PostgreSQL.
 
-> **Status: klar til test i drift.** Bestillingsside, adminside (overblik, bestillinger, deltagere, borde, billettyper, events, betaling), flere events, pladsreservation, betalingsinfo, bekræftelsesmails og sikkerhed (login-spærring, grænse for bestillinger, sikre cookies) er på plads og dækket af unit tests. Betaling med kort/MobilePay via Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
+> **Status: klar til test i drift.** Bestillingsside, adminside (overblik, bestillinger, deltagere, borde, billettyper, events, betaling), flere events, pladsreservation, betalingsinfo, bekræftelsesmails og sikkerhed (login via Clerk, grænse for bestillinger) er på plads og dækket af unit tests. Betaling med kort/MobilePay via Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
 >
 > Dette er et hobbyprojekt.
 
@@ -18,6 +18,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 | Lag | Valg |
 |---|---|
 | Backend | Java 21, Spring Boot 3.5 (Spring Web, Spring Data JPA, Bean Validation, Spring Security) |
+| Login | [Clerk](https://clerk.com) til adminsiden; serveren tjekker Clerks token (JWT) |
 | Database | PostgreSQL |
 | Udviklingsmiljø | Docker Compose |
 | Frontend | HTML, CSS og JavaScript uden framework (serveres af Spring Boot fra `src/main/resources/static`) |
@@ -32,8 +33,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - `GET /api/ticket-types/current` viser de billetter, der kan købes lige nu
 - `POST /api/orders` opretter en bestilling med flere deltagere. Prisen beregnes på serveren, og inputtet valideres
 - Samlet fejlformat, så frontenden altid får læselige fejlbeskeder
-- Adminlogin på http://localhost:8081/admin med brugere fra `admin_user` (BCrypt-hashede kodeord). Alt under `/admin` og `/api/admin` kræver login
-- **Beskyttelse mod gætteri:** efter 5 forkerte kodeord på samme brugernavn, eller 20 fra samme IP-adresse, inden for 15 minutter spærres login i 15 minutter. Ukendte brugernavne behandles ens, så man ikke kan se, om et brugernavn findes. Et vellykket login nulstiller tælleren
+- **Adminlogin via Clerk** på http://localhost:8081/admin. Clerk står for kodeord, spærring ved gætteri og evt. 2-trins-login. Alt under `/api/admin` kræver et gyldigt Clerk-token med rollen `admin` (se [Login via Clerk](#login-via-clerk))
 - **Grænse for bestillinger:** højst 10 bestillinger i timen fra samme IP-adresse (derefter 429), så ingen kan fylde eventet med falske bestillinger
 - **Statusskift med kapacitetstjek:** genåbnes en annulleret bestilling, tjekkes det først, at der stadig er plads på eventet
 - **Overblik:** omsætning (betalt og afventende), solgte billetter, aktivitet de seneste 7 dage, graf over billetter pr. dag, salg pr. billettype og de nyeste bestillinger. En påmindelse viser, hvor mange bestillinger der venter på betaling
@@ -64,7 +64,7 @@ erDiagram
 | `customer_order` | En bestilling med kontaktperson, evt. navne gruppen vil sidde med, status (`PENDING`, `PAID`, `CANCELLED`, `REFUNDED`) og samlet beløb |
 | `participant` | Én række pr. billet med deltagerens fulde navn, den pris, der blev betalt, og pladsønsker (begynderbord, bordende) |
 | `payment` | Betalinger fra Stripe (oprettet i databasen, endnu ikke brugt af koden) |
-| `admin_user` | Logins til adminsiden. Kodeord gemmes som BCrypt-hash |
+| `admin_user` | Bruges ikke længere (login sker via Clerk). Kan slettes |
 | `payment_settings` | Betalingsoplysninger (konto, MobilePay, frist, besked). Altid præcis én række |
 
 Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indtægt pr. billettype. Det tæller kun betalte bestillinger.
@@ -80,7 +80,7 @@ Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indt
 - **En bestilling bliver først betalt, når Stripe bekræfter det** (planlagt), ikke fordi brugeren lander på en tak-side.
 - **Databasen styres af `database/schema.sql`.** Hibernate kontrollerer kun ved opstart, at Java-klasserne passer til tabellerne (`ddl-auto=validate`).
 - **Så få følsomme data som muligt.** Bordende af helbredsmæssige årsager gemmes kun som ja/nej, ikke årsagen.
-- **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`, og den første admins kodeord fra `ADMIN_PASSWORD`.
+- **Hemmeligheder ligger ikke i koden.** Databasekodeordet læses fra miljøvariablen `DB_PASSWORD`. Clerks hemmelige nøgle bruges slet ikke: serveren tjekker tokens med Clerks offentlige nøgler.
 - **Lukket, medmindre andet er sagt.** `SecurityConfig` lister præcis, hvad besøgende må (bestillingssiden, `GET /api/ticket-types/current`, `POST /api/orders`). Alt andet kræver adminlogin.
 
 ## Kom i gang med Docker (nemmest)
@@ -105,7 +105,7 @@ Databasen ligger på port **5433** på din computer, så den ikke støder sammen
 **Kør koden fra IntelliJ i stedet:** start kun databasen med `docker compose up -d db`, og sæt disse miljøvariabler i din run configuration:
 
 ```
-DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem;ADMIN_PASSWORD=dit-admin-kodeord;SESSION_COOKIE_SECURE=false
+DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem;CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
 **Se databasen i pgAdmin:** opret en server med host `localhost` (eller `host.docker.internal`, hvis pgAdmin selv kører i Docker), port `5433`, bruger `billetsystem` og kodeordet fra `.env`.
@@ -117,7 +117,7 @@ docker compose down -v
 docker compose up --build
 ```
 
-**Admin-login:** den første admin oprettes automatisk ud fra `ADMIN_USERNAME` og `ADMIN_PASSWORD` i `.env`, hvis der ikke findes nogen admin endnu. Log ind på http://localhost:8081/admin.
+**Admin-login:** sæt `CLERK_PUBLISHABLE_KEY` i `.env` (se [Login via Clerk](#login-via-clerk)), og log ind på http://localhost:8081/admin.
 
 **Opdatering af en eksisterende database:** `schema.sql` køres kun på en tom database. Nye tabeller til en database, der allerede er i brug, ligger i `database/migrations/` og kan køres flere gange uden skade:
 
@@ -139,11 +139,9 @@ docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrat
 
 Brug en afsenderadresse på jeres eget domæne, og opsæt SPF og DKIM hos mailudbyderen, så mailene ikke havner i spam.
 
-**Session-cookie i drift:** lad `SESSION_COOKIE_SECURE` være `true` (standard), og kør programmet bag HTTPS.
+**Login i drift:** sæt `CLERK_AUTHORIZED_PARTIES` til jeres rigtige adresse, fx `https://billetter.example.com`, og brug en Clerk-produktionsinstans (`pk_live_...`).
 
-**Bag en proxy:** kører programmet bag en proxy eller load balancer, så sæt `FORWARD_HEADERS_STRATEGY=native`. Ellers ser alle ud til at have proxyens IP-adresse, og login-spærringen pr. IP rammer alle på én gang.
-
-**Låst ude?** Spærringen ligger i hukommelsen, så en genstart af programmet ophæver den med det samme (`docker compose restart app`).
+**Bag en proxy:** kører programmet bag en proxy eller load balancer, så sæt `FORWARD_HEADERS_STRATEGY=native`. Ellers ser alle ud til at have proxyens IP-adresse, og grænsen for bestillinger pr. IP rammer alle på én gang.
 
 **Har du ændret Java-koden?** Kør `docker compose up --build` igen for at bygge et nyt image.
 
@@ -186,14 +184,12 @@ Vil du bruge en anden bruger, så ret `spring.datasource.username` i `src/main/r
 
 Sæt miljøvariablen `DB_PASSWORD` til kodeordet fra trin 2 og start programmet.
 
-- **IntelliJ:** åbn `BilletsystemApplication`, vælg **Run → Edit Configurations → Modify options → Environment variables**, skriv `DB_PASSWORD=dit-kodeord;SESSION_COOKIE_SECURE=false`, og kør.
-- **Terminal:** `DB_PASSWORD=dit-kodeord SESSION_COOKIE_SECURE=false mvn spring-boot:run`
-
-`SESSION_COOKIE_SECURE=false` er nødvendig lokalt, fordi http://localhost ikke er HTTPS. Ellers sender browseren ikke session-cookien, og login virker ikke. I drift skal den være `true` (standard).
+- **IntelliJ:** åbn `BilletsystemApplication`, vælg **Run → Edit Configurations → Modify options → Environment variables**, skriv `DB_PASSWORD=dit-kodeord;CLERK_PUBLISHABLE_KEY=pk_test_...`, og kør.
+- **Terminal:** `DB_PASSWORD=dit-kodeord CLERK_PUBLISHABLE_KEY=pk_test_... mvn spring-boot:run`
 
 Programmet kører på **http://localhost:8081**. Porten kan ændres med `server.port` i `application.properties`.
 
-Før første start kan du også sætte `ADMIN_PASSWORD` (mindst 10 tegn) og evt. `ADMIN_USERNAME` (standard: `admin`). Så opretter programmet den første admin automatisk, og du kan logge ind på http://localhost:8081/admin.
+Login på http://localhost:8081/admin kræver en Clerk-app, se [Login via Clerk](#login-via-clerk).
 
 ### 4. Prøv det af
 
@@ -267,9 +263,23 @@ Er input ugyldigt, svarer serveren med `400` og en forklaring, fx `{"fejl": "Ugy
 | `GET /api/admin/ticket-types` | Billettyper med salgstal |
 | `POST /api/admin/ticket-types?eventId=`, `PUT /api/admin/ticket-types/{id}` | Opret en billettype til et event, eller ret en |
 
-POST og PUT kræver CSRF-nøglen fra `GET /api/csrf` i headeren `X-CSRF-TOKEN`.
+Alle kald kræver Clerks token i headeren `Authorization: Bearer <token>` (adminsiden henter det med `Clerk.session.getToken()`). Uden token svares 401, uden rollen `admin` 403. `GET /api/clerk-config` er offentlig og giver login-siden den offentlige nøgle.
 
 **Om tallene:** "Betalt" er bestillinger med status `PAID`, og "afventer" er `PENDING`. Annullerede og refunderede bestillinger tæller ikke som solgt. Tallene gælder ét event ad gangen (`?eventId=`). Uden `eventId` bruges det næste event, der ikke er slut.
+
+## Login via Clerk
+
+Adminsiden bruger [Clerk](https://clerk.com) til login. Sådan sættes det op (én gang pr. Clerk-app):
+
+1. Opret en app på [dashboard.clerk.com](https://dashboard.clerk.com) med login via e-mail og kodeord.
+2. **Configure → Sessions → Customize session token:** tilføj `{"role": "{{user.public_metadata.role}}"}`. Så indeholder tokenet brugerens rolle.
+3. **Configure → Restrictions:** sæt *Sign-up mode* til *Restricted*, så ingen selv kan oprette en konto.
+4. **Users:** opret (eller inviter) arrangørerne, og giv hver af dem *public metadata* `{"role": "admin"}`.
+5. **API keys:** kopiér *Publishable key* (`pk_test_...`) til `.env` som `CLERK_PUBLISHABLE_KEY`, og genstart (`docker compose up -d app`).
+
+Serveren henter Clerks offentlige nøgler og tjekker hvert token: underskrift, udløbstid, at det kommer fra jeres Clerk-app (`iss`), og at det er lavet til en af adresserne i `CLERK_AUTHORIZED_PARTIES` (`azp`). Clerks hemmelige nøgle (`sk_...`) er ikke nødvendig og skal ikke i `.env`.
+
+En bruger uden rollen `admin` kan logge ind hos Clerk, men får 403 på admin-API'et og en forklaring på login-siden.
 
 ## Tests
 
@@ -279,7 +289,7 @@ docker run --rm -v "$PWD":/app -w /app maven:3.9-eclipse-temurin-21 mvn -q test
 
 Eller kør dem fra IntelliJ (højreklik på `src/test/java` → Run 'All Tests'). Testene kræver ingen database.
 
-Testene dækker statusskift, prisberegning (early bird, normalpris, udløbne billettyper), kapacitet ved bestilling og genåbning, automatisk annullering efter betalingsfristen, cachen af billettyper, login-spærring, grænsen for bestillinger og den generelle fejlhåndtering.
+Testene dækker statusskift, prisberegning (early bird, normalpris, udløbne billettyper), kapacitet ved bestilling og genåbning, automatisk annullering efter betalingsfristen, cachen af billettyper, tjek af Clerk-tokens og admin-rollen, grænsen for bestillinger og den generelle fejlhåndtering.
 
 ## Projektstruktur
 
@@ -294,7 +304,7 @@ billetsystem/
 ├─ docker-compose.yml            PostgreSQL, programmet og Mailpit
 ├─ .env.example                  skabelon til .env (DB_PASSWORD)
 ├─ pom.xml
-├─ src/test/java/               unit tests (fx reglerne for login-spærring)
+├─ src/test/java/               unit tests (forretningsregler, Clerk-tokens, cache)
 └─ src/main/
    ├─ java/dk/billetsystem/
    │  ├─ BilletsystemApplication.java
@@ -303,7 +313,7 @@ billetsystem/
    │  ├─ service/                forretningsregler (TicketService, OrderService, AdminOrderService, StatisticsService)
    │  ├─ controller/             REST-API og fejlhåndtering
    │  ├─ mail/                   bekræftelsesmails (indhold, afsendelse i baggrunden)
-   │  ├─ security/               adgangsregler, login og oprettelse af første admin
+   │  ├─ security/               adgangsregler og tjek af Clerk-tokens
    │  └─ dto/                    objekter til ind- og udgående JSON
    └─ resources/
       ├─ application.properties
@@ -317,7 +327,7 @@ billetsystem/
 - [x] Hent billettyper, der kan købes nu
 - [x] Opret bestilling med serverberegnet pris og validering
 - [x] Bestillingsside i HTML og JavaScript
-- [x] Adminlogin (Spring Security)
+- [x] Adminlogin via Clerk
 - [x] Overblik med salgstal og graf
 - [x] Bestillinger med statusskift (markér som betalt ved bankoverførsel)
 - [x] Deltagerliste, tjekind-liste og eksport til CSV
@@ -327,7 +337,7 @@ billetsystem/
 - [ ] Betaling med Stripe (kort og MobilePay)
 - [x] Bekræftelsesmail og mail om modtaget betaling
 - [x] Pladsreservation (grupper, begynder-/singlebord, bordende) og info om gæstebilletter
-- [x] Sikkerhed: login-spærring, grænse for bestillinger pr. IP, sikre session-cookies, Docker uden root
+- [x] Sikkerhed: login via Clerk, grænse for bestillinger pr. IP, Docker uden root
 - [x] Automatisk annullering af ubetalte bestillinger efter betalingsfristen
 - [x] Unit tests af de vigtigste forretningsregler
 - [ ] Hosting med HTTPS, rigtig mailudbyder og betalingsoplysninger

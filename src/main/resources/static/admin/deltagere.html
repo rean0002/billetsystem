@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Deltagere · Admin</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/clerk.js" defer></script>
     <script src="/admin/admin.js" defer></script>
     <script src="/admin/deltagere.js" defer></script>
 </head>
@@ -28,12 +29,10 @@
             <span>Viser event:</span>
             <select id="event-select"></select>
         </label>
-        <!-- Log ud skal være en POST med CSRF-nøgle, ellers kunne en anden side logge dig ud -->
-        <form method="post" action="/admin/logout" class="logout">
+        <div class="logout">
             <span class="whoami" id="whoami"></span>
-            <input type="hidden" id="logout-csrf">
-            <button type="submit" class="link-button">Log ud</button>
-        </form>
+            <button type="button" class="link-button" id="logout">Log ud</button>
+        </div>
     </div>
 </header>
 
