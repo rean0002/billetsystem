@@ -1,6 +1,7 @@
 package dk.billetsystem.repository;
 
 import dk.billetsystem.model.CustomerOrder;
+import dk.billetsystem.model.OrderStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -21,4 +22,7 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, In
 
     @EntityGraph(attributePaths = {"participants", "participants.ticketType"})
     Optional<CustomerOrder> findWithParticipantsById(Integer id);
+
+    /** Bestillinger med en bestemt status, fx dem der afventer betaling. */
+    List<CustomerOrder> findByStatus(OrderStatus status);
 }
