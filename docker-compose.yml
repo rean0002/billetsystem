@@ -26,6 +26,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # Mails går til Mailpit (se nedenfor), ikke ud på internettet
+      # Lokalt køres der http, ikke https, så session-cookien må ikke kræve https
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       MAIL_SMTP_AUTH: "false"

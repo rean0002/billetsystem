@@ -10,5 +10,9 @@ RUN mvn -q package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
+# Kør som en almindelig bruger, ikke root. Bliver programmet nogensinde misbrugt,
+# kan angriberen så ikke ændre i resten af containeren.
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+USER app
 EXPOSE 8081
 CMD ["java", "-jar", "app.jar"]

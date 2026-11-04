@@ -8,9 +8,11 @@ import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.TicketType;
 import dk.billetsystem.service.EventService;
+import dk.billetsystem.service.OrderRateLimiter;
 import dk.billetsystem.service.PaymentSettingsService;
 import dk.billetsystem.service.OrderService;
 import dk.billetsystem.service.TicketService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,15 +39,17 @@ public class PublicController {
     private final EventService eventService;
     private final PaymentSettingsService paymentSettingsService;
     private final OrderMailService mailService;
+    private final OrderRateLimiter rateLimiter;
 
     public PublicController(TicketService ticketService, OrderService orderService,
                             EventService eventService, PaymentSettingsService paymentSettingsService,
-                            OrderMailService mailService) {
+                            OrderMailService mailService, OrderRateLimiter rateLimiter) {
         this.ticketService = ticketService;
         this.orderService = orderService;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
         this.mailService = mailService;
+        this.rateLimiter = rateLimiter;
     }
 
     /** GET /api/ticket-types/current: de billettyper, der kan købes lige nu, på tværs af events. */
@@ -66,7 +70,9 @@ public class PublicController {
     /** POST /api/orders: opret en bestilling. Svarer med 201 Created og oplysninger om, hvordan man betaler. */
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse createOrder(@Valid @RequestBody OrderRequest request) {
+    public OrderResponse createOrder(@Valid @RequestBody OrderRequest request, HttpServletRequest http) {
+        // Højst 10 bestillinger i timen fra samme IP-adresse, ellers 429 (se OrderRateLimiter)
+        rateLimiter.check(http.getRemoteAddr());
         CustomerOrder order = orderService.createOrder(request);
         return OrderResponse.from(order, paymentSettingsService.instructionsFor(order), mailService.isEnabled());
     }
