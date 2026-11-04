@@ -2,7 +2,7 @@
 
 Billetbestilling og adminsystem til events med siddepladser, fx messer og workshops, bygget med Java (Spring Boot) og PostgreSQL.
 
-> **Status: under udvikling.** Backend-grundlaget (database, billettyper og bestilling), bestillingssiden og adminsiden (login, overblik, bestillinger, deltagerliste og billettyper) er på plads. Betaling med Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
+> **Status: klar til test i drift.** Bestillingsside, adminside (overblik, bestillinger, deltagere, borde, billettyper, events, betaling), flere events, pladsreservation, betalingsinfo, bekræftelsesmails og sikkerhed (login-spærring, grænse for bestillinger, sikre cookies) er på plads og dækket af unit tests. Betaling med kort/MobilePay via Stripe er endnu ikke lavet. Se [roadmap](#roadmap).
 >
 > Dette er et hobbyprojekt.
 
@@ -34,11 +34,13 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - Samlet fejlformat, så frontenden altid får læselige fejlbeskeder
 - Adminlogin på http://localhost:8081/admin med brugere fra `admin_user` (BCrypt-hashede kodeord). Alt under `/admin` og `/api/admin` kræver login
 - **Beskyttelse mod gætteri:** efter 5 forkerte kodeord på samme brugernavn, eller 20 fra samme IP-adresse, inden for 15 minutter spærres login i 15 minutter. Ukendte brugernavne behandles ens, så man ikke kan se, om et brugernavn findes. Et vellykket login nulstiller tælleren
+- **Grænse for bestillinger:** højst 10 bestillinger i timen fra samme IP-adresse (derefter 429), så ingen kan fylde eventet med falske bestillinger
+- **Statusskift med kapacitetstjek:** genåbnes en annulleret bestilling, tjekkes det først, at der stadig er plads på eventet
 - **Overblik:** omsætning (betalt og afventende), solgte billetter, aktivitet de seneste 7 dage, graf over billetter pr. dag, salg pr. billettype og de nyeste bestillinger. En påmindelse viser, hvor mange bestillinger der venter på betaling
 - **Bestillinger:** søg og filtrér på status, se detaljer og skift status (markér som betalt, annullér, refundér, genåbn). Kun lovlige statusskift er mulige. Eksport til CSV
 - **Deltagerliste:** alle deltagere med søgning og filter på billettype, eksport til CSV (åbner direkte i dansk Excel) og en printvenlig tjekind-liste med afkrydsningsfelt til indgangen
 - **Billettyper:** se priser, perioder og salg, opret nye billettyper og ret eksisterende (fx early bird-perioder). Nye priser gælder kun nye bestillinger
-- **Betaling med bankoverførsel/MobilePay:** arrangørerne indtaster kontonummer, evt. MobilePay, betalingsfrist og en besked under "Betaling" på adminsiden. Efter bestilling ser kunden beløb, konto, en reference ("Bestilling 42") og fristen, med en kopiér-knap ved hver værdi. Når pengene er modtaget, markerer arrangørerne bestillingen som betalt. Bestillinger med overskredet frist markeres på adminsiden
+- **Betaling med bankoverførsel/MobilePay:** arrangørerne indtaster kontonummer, evt. MobilePay, betalingsfrist og en besked under "Betaling" på adminsiden. Efter bestilling ser kunden beløb, konto, en reference ("Bestilling 42") og fristen, med en kopiér-knap ved hver værdi. Når pengene er modtaget, markerer arrangørerne bestillingen som betalt. Bestillinger med overskredet frist markeres på adminsiden og annulleres automatisk af et job, der kører hver time, så pladserne frigives
 - **Bekræftelsesmails:** efter bestilling får kunden en mail med deltagere, pladsønsker, total, betalingsinfo og eventets praktiske info. Når arrangørerne markerer bestillingen som betalt, får kunden en mail om, at betalingen er modtaget. På adminsiden kan man se, om mailene er sendt, og sende dem igen. Mails sendes i baggrunden, så en nede mailserver aldrig stopper en bestilling
 - **Pladsreservation:** ved hver deltager kan man vælge begynder-/singlebordet eller bede om en bordende af helbredsmæssige årsager (kun ja/nej, årsagen gemmes ikke). Deltagere på samme bestilling sidder sammen, og en gruppe kan skrive fulde navne på andre med egen billet, de vil sidde med
 - **Borde (admin):** grupper med de navne, de vil sidde med, slået op blandt deltagerne (navne uden billet markeres), samt lister over begynder-/singlebordet og bordender. Kan printes. Ønskerne står også på deltagerlisten, i bestillingen og i CSV-filen
@@ -71,7 +73,7 @@ Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indt
 
 - **Prisen findes kun på serveren.** Frontenden sender aldrig en pris, så ingen kan ændre den. Serveren slår prisen op ud fra, hvilken billettype der gælder på bestillingstidspunktet.
 - **Én bestilling = ét event.** Serveren afviser en bestilling med billetter til flere events.
-- **Ingen overbooking.** Afventende og betalte bestillinger optager en plads. Ved bestilling låses eventets række i databasen (`SELECT ... FOR UPDATE`), så to samtidige bestillinger ikke kan tage de samme sidste pladser.
+- **Ingen overbooking.** Gælder både nye og genåbnede bestillinger (`EventService.reserveSeats`). Afventende og betalte bestillinger optager en plads. Ved bestilling låses eventets række i databasen (`SELECT ... FOR UPDATE`), så to samtidige bestillinger ikke kan tage de samme sidste pladser.
 - **Beløb gemmes i øre** som heltal (29500 = 295,00 kr.), så der ikke opstår afrundingsfejl.
 - **Prisen kopieres til hver deltager**, så historikken stemmer, selv hvis billetprisen ændres senere.
 - **En bestilling bliver først betalt, når Stripe bekræfter det** (planlagt), ikke fordi brugeren lander på en tak-side.
@@ -102,7 +104,7 @@ Databasen ligger på port **5433** på din computer, så den ikke støder sammen
 **Kør koden fra IntelliJ i stedet:** start kun databasen med `docker compose up -d db`, og sæt disse miljøvariabler i din run configuration:
 
 ```
-DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem;ADMIN_PASSWORD=dit-admin-kodeord
+DB_PASSWORD=dit-kodeord;SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/billetsystem;ADMIN_PASSWORD=dit-admin-kodeord;SESSION_COOKIE_SECURE=false
 ```
 
 **Se databasen i pgAdmin:** opret en server med host `localhost` (eller `host.docker.internal`, hvis pgAdmin selv kører i Docker), port `5433`, bruger `billetsystem` og kodeordet fra `.env`.
@@ -135,6 +137,8 @@ docker compose exec -T db psql -U billetsystem -d billetsystem < database/migrat
 | `MAIL_REPLY_TO` | valgfri: adressen, kunderne svarer til |
 
 Brug en afsenderadresse på jeres eget domæne, og opsæt SPF og DKIM hos mailudbyderen, så mailene ikke havner i spam.
+
+**Session-cookie i drift:** lad `SESSION_COOKIE_SECURE` være `true` (standard), og kør programmet bag HTTPS.
 
 **Bag en proxy:** kører programmet bag en proxy eller load balancer, så sæt `FORWARD_HEADERS_STRATEGY=native`. Ellers ser alle ud til at have proxyens IP-adresse, og login-spærringen pr. IP rammer alle på én gang.
 
@@ -181,8 +185,10 @@ Vil du bruge en anden bruger, så ret `spring.datasource.username` i `src/main/r
 
 Sæt miljøvariablen `DB_PASSWORD` til kodeordet fra trin 2 og start programmet.
 
-- **IntelliJ:** åbn `BilletsystemApplication`, vælg **Run → Edit Configurations → Modify options → Environment variables**, skriv `DB_PASSWORD=dit-kodeord`, og kør.
-- **Terminal:** `DB_PASSWORD=dit-kodeord mvn spring-boot:run`
+- **IntelliJ:** åbn `BilletsystemApplication`, vælg **Run → Edit Configurations → Modify options → Environment variables**, skriv `DB_PASSWORD=dit-kodeord;SESSION_COOKIE_SECURE=false`, og kør.
+- **Terminal:** `DB_PASSWORD=dit-kodeord SESSION_COOKIE_SECURE=false mvn spring-boot:run`
+
+`SESSION_COOKIE_SECURE=false` er nødvendig lokalt, fordi http://localhost ikke er HTTPS. Ellers sender browseren ikke session-cookien, og login virker ikke. I drift skal den være `true` (standard).
 
 Programmet kører på **http://localhost:8081**. Porten kan ændres med `server.port` i `application.properties`.
 
@@ -272,6 +278,8 @@ docker run --rm -v "$PWD":/app -w /app maven:3.9-eclipse-temurin-21 mvn -q test
 
 Eller kør dem fra IntelliJ (højreklik på `src/test/java` → Run 'All Tests'). Testene kræver ingen database.
 
+Testene dækker statusskift, prisberegning (early bird, normalpris, udløbne billettyper), kapacitet ved bestilling og genåbning, automatisk annullering efter betalingsfristen, login-spærring, grænsen for bestillinger og den generelle fejlhåndtering.
+
 ## Projektstruktur
 
 ```
@@ -318,3 +326,7 @@ billetsystem/
 - [ ] Betaling med Stripe (kort og MobilePay)
 - [x] Bekræftelsesmail og mail om modtaget betaling
 - [x] Pladsreservation (grupper, begynder-/singlebord, bordende) og info om gæstebilletter
+- [x] Sikkerhed: login-spærring, grænse for bestillinger pr. IP, sikre session-cookies, Docker uden root
+- [x] Automatisk annullering af ubetalte bestillinger efter betalingsfristen
+- [x] Unit tests af de vigtigste forretningsregler
+- [ ] Hosting med HTTPS, rigtig mailudbyder og betalingsoplysninger
