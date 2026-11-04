@@ -79,6 +79,16 @@ public class AdminOrderService {
     @Transactional
     public AdminOrderResponse changeStatus(int id, OrderStatus newStatus) {
         CustomerOrder order = getOrder(id);
+        OrderStatus oldStatus = order.getStatus();
+        if (!oldStatus.canChangeTo(newStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "En bestilling med status " + oldStatus + " kan ikke ændres til " + newStatus);
+        }
+        // Genåbnes en annulleret bestilling, optager den igen pladser. Tjek først, at der er plads,
+        // ellers kunne eventet blive overbooket (fx hvis pladserne er solgt til andre i mellemtiden).
+        if (!EventService.TAKES_A_SEAT.contains(oldStatus) && EventService.TAKES_A_SEAT.contains(newStatus)) {
+            eventService.reserveSeats(order.getEvent().getId(), order.getParticipants().size());
+        }
         try {
             order.changeStatus(newStatus);
         } catch (IllegalStateException e) {

@@ -3,11 +3,9 @@ package dk.billetsystem.service;
 import dk.billetsystem.dto.OrderRequest;
 import dk.billetsystem.mail.OrderMailEvents;
 import dk.billetsystem.model.CustomerOrder;
-import dk.billetsystem.model.Event;
 import dk.billetsystem.model.Participant;
 import dk.billetsystem.model.TicketType;
 import dk.billetsystem.repository.CustomerOrderRepository;
-import dk.billetsystem.repository.EventRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,16 +25,13 @@ public class OrderService {
     private final CustomerOrderRepository orderRepository;
     private final TicketService ticketService;
     private final EventService eventService;
-    private final EventRepository eventRepository;
     private final ApplicationEventPublisher events;
 
     public OrderService(CustomerOrderRepository orderRepository, TicketService ticketService,
-                        EventService eventService, EventRepository eventRepository,
-                        ApplicationEventPublisher events) {
+                        EventService eventService, ApplicationEventPublisher events) {
         this.orderRepository = orderRepository;
         this.ticketService = ticketService;
         this.eventService = eventService;
-        this.eventRepository = eventRepository;
         this.events = events;
     }
 
@@ -92,16 +87,8 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "En bestilling kan kun indeholde billetter til ét event");
         }
 
-        // Lås eventet, så to samtidige bestillinger ikke kan tage de samme sidste pladser
-        Event event = eventRepository.findByIdForUpdate(order.getEvent().getId()).orElseThrow();
-        Long seatsLeft = eventService.seatsLeft(event);
-        int wanted = order.getParticipants().size();
-        if (seatsLeft != null && wanted > seatsLeft) {
-            String message = seatsLeft == 0
-                    ? event.getName() + " er desværre udsolgt"
-                    : "Der er kun " + seatsLeft + " " + (seatsLeft == 1 ? "plads" : "pladser") + " tilbage til " + event.getName();
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
-        }
+        // Lås eventet og tjek, at der er plads (se EventService.reserveSeats)
+        eventService.reserveSeats(order.getEvent().getId(), order.getParticipants().size());
     }
 
     /**

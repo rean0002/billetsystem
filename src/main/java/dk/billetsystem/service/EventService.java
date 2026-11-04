@@ -62,6 +62,25 @@ public class EventService {
         return participantRepository.countByEventAndStatus(event.getId(), TAKES_A_SEAT);
     }
 
+    /**
+     * Sikrer, at der er plads til wanted deltagere mere, ellers 400 med en forståelig besked.
+     *
+     * Eventets række låses, til transaktionen er færdig (SELECT ... FOR UPDATE). Bestiller eller genåbner
+     * to personer de sidste pladser samtidig, må den ene vente, så eventet ikke kan blive overbooket.
+     * Skal derfor kaldes inde i en @Transactional-metode, før bestillingen begynder at optage pladser.
+     */
+    public void reserveSeats(int eventId, int wanted) {
+        Event event = eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event " + eventId + " findes ikke"));
+        Long seatsLeft = seatsLeft(event);
+        if (seatsLeft != null && wanted > seatsLeft) {
+            String message = seatsLeft == 0
+                    ? event.getName() + " er desværre udsolgt"
+                    : "Der er kun " + seatsLeft + " " + (seatsLeft == 1 ? "plads" : "pladser") + " tilbage til " + event.getName();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+    }
+
     /** Ledige pladser, eller null hvis eventet ikke har en grænse. */
     public Long seatsLeft(Event event) {
         if (event.getMaxParticipants() == null) return null;
