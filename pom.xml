@@ -58,8 +58,6 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Fase 3 (betaling): tilføj Stripes Java-bibliotek, se https://docs.stripe.com/api?lang=java -->
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
