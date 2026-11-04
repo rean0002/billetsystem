@@ -43,12 +43,14 @@ class EventServiceTest {
     CustomerOrderRepository orderRepository;
     @Mock
     TicketTypeRepository ticketTypeRepository;
+    @Mock
+    TicketTypeCache ticketTypeCache;
 
     EventService eventService;
 
     @BeforeEach
     void setUp() {
-        eventService = new EventService(eventRepository, participantRepository, orderRepository, ticketTypeRepository);
+        eventService = new EventService(eventRepository, participantRepository, orderRepository, ticketTypeRepository, ticketTypeCache);
     }
 
     private void eventWith(Integer maxParticipants, long seatsTaken) {

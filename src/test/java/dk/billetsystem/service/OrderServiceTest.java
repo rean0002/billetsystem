@@ -45,6 +45,8 @@ class OrderServiceTest {
     EventService eventService;
     @Mock
     ApplicationEventPublisher events;
+    @Mock
+    TicketTypeCache ticketTypeCache;
 
     OrderService orderService;
 
@@ -54,7 +56,7 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(orderRepository, ticketService, eventService, events);
+        orderService = new OrderService(orderRepository, ticketService, eventService, events, ticketTypeCache);
     }
 
     /** Når bestillingen gemmes, giver "databasen" den et id. */
@@ -115,6 +117,7 @@ class OrderServiceTest {
         orderService.createOrder(request(2, 2));
 
         verify(eventService).reserveSeats(1, 2);
+        verify(ticketTypeCache).evict(); // ledige pladser er ændret
     }
 
     @Test

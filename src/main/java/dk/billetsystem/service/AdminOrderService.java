@@ -43,15 +43,17 @@ public class AdminOrderService {
     private final PaymentSettingsService paymentSettingsService;
     private final OrderMailService mailService;
     private final ApplicationEventPublisher events;
+    private final TicketTypeCache ticketTypeCache;
 
     public AdminOrderService(CustomerOrderRepository orderRepository, EventService eventService,
                              PaymentSettingsService paymentSettingsService, OrderMailService mailService,
-                             ApplicationEventPublisher events) {
+                             ApplicationEventPublisher events, TicketTypeCache ticketTypeCache) {
         this.orderRepository = orderRepository;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
         this.mailService = mailService;
         this.events = events;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
     /** En bestilling, som adminsiden ser den, inkl. betalingsfrist. */
@@ -93,6 +95,10 @@ public class AdminOrderService {
             order.changeStatus(newStatus);
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        // Annullering eller genåbning ændrer antallet af ledige pladser på bestillingssiden
+        if (EventService.TAKES_A_SEAT.contains(oldStatus) != EventService.TAKES_A_SEAT.contains(newStatus)) {
+            ticketTypeCache.evict();
         }
         // Kunden får besked om, at betalingen er modtaget, når ændringen er gemt (se OrderMailListener)
         if (newStatus == OrderStatus.PAID) events.publishEvent(new OrderMailEvents.OrderPaid(id));

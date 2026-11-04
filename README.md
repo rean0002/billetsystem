@@ -73,6 +73,7 @@ Der er også et view, `v_ticket_sales`, som giver antal solgte billetter og indt
 
 - **Prisen findes kun på serveren.** Frontenden sender aldrig en pris, så ingen kan ændre den. Serveren slår prisen op ud fra, hvilken billettype der gælder på bestillingstidspunktet.
 - **Én bestilling = ét event.** Serveren afviser en bestilling med billetter til flere events.
+- **Kort cache på bestillingssiden.** Svaret på `GET /api/ticket-types/current` huskes i op til 30 sekunder (`TicketTypeCache`), så databasen ikke spørges ved hvert besøg. Cachen tømmes, så snart billettyper, events eller bestillinger ændres (efter commit), og kapaciteten tjekkes altid i databasen ved bestilling.
 - **Ingen overbooking.** Gælder både nye og genåbnede bestillinger (`EventService.reserveSeats`). Afventende og betalte bestillinger optager en plads. Ved bestilling låses eventets række i databasen (`SELECT ... FOR UPDATE`), så to samtidige bestillinger ikke kan tage de samme sidste pladser.
 - **Beløb gemmes i øre** som heltal (29500 = 295,00 kr.), så der ikke opstår afrundingsfejl.
 - **Prisen kopieres til hver deltager**, så historikken stemmer, selv hvis billetprisen ændres senere.
@@ -218,7 +219,7 @@ curl -X POST http://localhost:8081/api/orders \
 
 ### `GET /api/ticket-types/current`
 
-Returnerer de billettyper, der kan købes lige nu (slået til, startet og ikke udløbet), billigste først.
+Returnerer de billettyper, der kan købes lige nu (slået til, startet og ikke udløbet), billigste først. Svaret caches i op til 30 sekunder og opdateres med det samme ved ændringer.
 
 ```json
 [
@@ -278,7 +279,7 @@ docker run --rm -v "$PWD":/app -w /app maven:3.9-eclipse-temurin-21 mvn -q test
 
 Eller kør dem fra IntelliJ (højreklik på `src/test/java` → Run 'All Tests'). Testene kræver ingen database.
 
-Testene dækker statusskift, prisberegning (early bird, normalpris, udløbne billettyper), kapacitet ved bestilling og genåbning, automatisk annullering efter betalingsfristen, login-spærring, grænsen for bestillinger og den generelle fejlhåndtering.
+Testene dækker statusskift, prisberegning (early bird, normalpris, udløbne billettyper), kapacitet ved bestilling og genåbning, automatisk annullering efter betalingsfristen, cachen af billettyper, login-spærring, grænsen for bestillinger og den generelle fejlhåndtering.
 
 ## Projektstruktur
 

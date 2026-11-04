@@ -24,9 +24,13 @@ public class TicketService {
     private final EventRepository eventRepository;
 
     // Spring giver automatisk klassen de repositories, den beder om (kaldes dependency injection)
-    public TicketService(TicketTypeRepository ticketTypeRepository, EventRepository eventRepository) {
+    private final TicketTypeCache ticketTypeCache;
+
+    public TicketService(TicketTypeRepository ticketTypeRepository, EventRepository eventRepository,
+                         TicketTypeCache ticketTypeCache) {
         this.ticketTypeRepository = ticketTypeRepository;
         this.eventRepository = eventRepository;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
     public List<TicketType> findCurrentTicketTypes() {
@@ -39,6 +43,7 @@ public class TicketService {
         validatePeriod(request);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Event " + eventId + " findes ikke"));
+        ticketTypeCache.evict(); // bestillingssiden skal vise den nye billettype
         return ticketTypeRepository.save(new TicketType(event, request.name().trim(), request.priceOre(),
                 request.validFrom(), request.validTo(), request.active()));
     }
@@ -49,6 +54,7 @@ public class TicketService {
         TicketType type = ticketTypeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Billettype " + id + " findes ikke"));
         type.update(request.name().trim(), request.priceOre(), request.validFrom(), request.validTo(), request.active());
+        ticketTypeCache.evict();
         return type;
     }
 

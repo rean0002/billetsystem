@@ -26,13 +26,16 @@ public class OrderService {
     private final TicketService ticketService;
     private final EventService eventService;
     private final ApplicationEventPublisher events;
+    private final TicketTypeCache ticketTypeCache;
 
     public OrderService(CustomerOrderRepository orderRepository, TicketService ticketService,
-                        EventService eventService, ApplicationEventPublisher events) {
+                        EventService eventService, ApplicationEventPublisher events,
+                        TicketTypeCache ticketTypeCache) {
         this.orderRepository = orderRepository;
         this.ticketService = ticketService;
         this.eventService = eventService;
         this.events = events;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
     /**
@@ -70,6 +73,7 @@ public class OrderService {
 
         checkOneEventAndCapacity(order);
         CustomerOrder saved = orderRepository.save(order);
+        ticketTypeCache.evict(); // antallet af ledige pladser er ændret
         // Bekræftelsesmailen sendes, når bestillingen er gemt (se OrderMailListener)
         events.publishEvent(new OrderMailEvents.OrderCreated(saved.getId()));
         return saved;

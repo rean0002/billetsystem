@@ -22,6 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /** Ubetalte bestillinger annulleres, når betalingsfristen (7 dage) er overskredet. */
@@ -32,6 +33,8 @@ class UnpaidOrderExpiryJobTest {
     CustomerOrderRepository orderRepository;
     @Mock
     PaymentSettingsService paymentSettingsService;
+    @Mock
+    TicketTypeCache ticketTypeCache;
 
     // "Nu" er 20. november 2026 kl. 12 dansk tid
     Clock clock = Clock.fixed(Instant.parse("2026-11-20T11:00:00Z"), ZoneOffset.UTC);
@@ -44,7 +47,7 @@ class UnpaidOrderExpiryJobTest {
         // lenient: bruges ikke, når der ingen bestillinger er
         lenient().when(settings.getPaymentDays()).thenReturn(7);
         when(paymentSettingsService.get()).thenReturn(settings);
-        job = new UnpaidOrderExpiryJob(orderRepository, paymentSettingsService, clock);
+        job = new UnpaidOrderExpiryJob(orderRepository, paymentSettingsService, clock, ticketTypeCache);
     }
 
     private CustomerOrder pendingOrderFrom(String createdAt) {
@@ -63,6 +66,7 @@ class UnpaidOrderExpiryJobTest {
         int cancelled = job.cancelOverdueOrders();
 
         assertEquals(1, cancelled);
+        verify(ticketTypeCache).evict(); // pladserne er frigivet
         assertEquals(OrderStatus.CANCELLED, overdue.getStatus());
         assertEquals(OrderStatus.PENDING, lastDay.getStatus());
         assertEquals(OrderStatus.PENDING, fresh.getStatus());

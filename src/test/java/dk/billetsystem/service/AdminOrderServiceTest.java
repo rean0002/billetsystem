@@ -44,13 +44,15 @@ class AdminOrderServiceTest {
     OrderMailService mailService;
     @Mock
     ApplicationEventPublisher events;
+    @Mock
+    TicketTypeCache ticketTypeCache;
 
     AdminOrderService service;
     CustomerOrder order;
 
     @BeforeEach
     void setUp() {
-        service = new AdminOrderService(orderRepository, eventService, paymentSettingsService, mailService, events);
+        service = new AdminOrderService(orderRepository, eventService, paymentSettingsService, mailService, events, ticketTypeCache);
 
         TicketType standard = TestData.ticketType(2, TestData.event(1, 10), "Standard", 29500);
         order = TestData.order(7, standard, "Lene Mortensen", "Tina Kristensen");
@@ -69,6 +71,7 @@ class AdminOrderServiceTest {
         AdminOrderResponse response = service.changeStatus(7, OrderStatus.PENDING);
 
         verify(eventService).reserveSeats(1, 2);
+        verify(ticketTypeCache).evict(); // pladserne er taget igen
         assertEquals("PENDING", response.status());
     }
 
@@ -92,6 +95,7 @@ class AdminOrderServiceTest {
         service.changeStatus(7, OrderStatus.PAID);
 
         verify(eventService, never()).reserveSeats(anyInt(), anyInt());
+        verify(ticketTypeCache, never()).evict(); // antallet af ledige pladser er det samme
         verify(events).publishEvent(new OrderMailEvents.OrderPaid(7));
         assertEquals(OrderStatus.PAID, order.getStatus());
     }

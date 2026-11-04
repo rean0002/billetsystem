@@ -35,13 +35,16 @@ public class EventService {
     private final ParticipantRepository participantRepository;
     private final CustomerOrderRepository orderRepository;
     private final TicketTypeRepository ticketTypeRepository;
+    private final TicketTypeCache ticketTypeCache;
 
     public EventService(EventRepository eventRepository, ParticipantRepository participantRepository,
-                        CustomerOrderRepository orderRepository, TicketTypeRepository ticketTypeRepository) {
+                        CustomerOrderRepository orderRepository, TicketTypeRepository ticketTypeRepository,
+                        TicketTypeCache ticketTypeCache) {
         this.eventRepository = eventRepository;
         this.participantRepository = participantRepository;
         this.orderRepository = orderRepository;
         this.ticketTypeRepository = ticketTypeRepository;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
     public List<Event> findAll() {
@@ -102,6 +105,7 @@ public class EventService {
     @Transactional
     public Event create(EventRequest request) {
         validate(request);
+        ticketTypeCache.evict();
         return eventRepository.save(new Event(request.name().trim(), request.startDate(), request.endDate(),
                 request.maxParticipants(), blankToNull(request.publicInfo())));
     }
@@ -112,6 +116,7 @@ public class EventService {
         Event event = get(id);
         event.update(request.name().trim(), request.startDate(), request.endDate(),
                 request.maxParticipants(), blankToNull(request.publicInfo()));
+        ticketTypeCache.evict(); // navn, datoer, pladser og info vises på bestillingssiden
         return event;
     }
 
@@ -147,6 +152,7 @@ public class EventService {
         }
         ticketTypeRepository.deleteAll(ticketTypeRepository.findByEventIdOrderByValidFrom(id));
         eventRepository.delete(event);
+        ticketTypeCache.evict();
         log.info("Slettede eventet '{}' med {} annullerede/refunderede bestilling(er)", event.getName(), orders.size());
     }
 

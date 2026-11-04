@@ -9,6 +9,7 @@ import dk.billetsystem.model.Event;
 import dk.billetsystem.model.TicketType;
 import dk.billetsystem.service.EventService;
 import dk.billetsystem.service.OrderRateLimiter;
+import dk.billetsystem.service.TicketTypeCache;
 import dk.billetsystem.service.PaymentSettingsService;
 import dk.billetsystem.service.OrderService;
 import dk.billetsystem.service.TicketService;
@@ -40,21 +41,31 @@ public class PublicController {
     private final PaymentSettingsService paymentSettingsService;
     private final OrderMailService mailService;
     private final OrderRateLimiter rateLimiter;
+    private final TicketTypeCache ticketTypeCache;
 
     public PublicController(TicketService ticketService, OrderService orderService,
                             EventService eventService, PaymentSettingsService paymentSettingsService,
-                            OrderMailService mailService, OrderRateLimiter rateLimiter) {
+                            OrderMailService mailService, OrderRateLimiter rateLimiter,
+                            TicketTypeCache ticketTypeCache) {
         this.ticketService = ticketService;
         this.orderService = orderService;
         this.eventService = eventService;
         this.paymentSettingsService = paymentSettingsService;
         this.mailService = mailService;
         this.rateLimiter = rateLimiter;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
-    /** GET /api/ticket-types/current: de billettyper, der kan købes lige nu, på tværs af events. */
+    /**
+     * GET /api/ticket-types/current: de billettyper, der kan købes lige nu, på tværs af events.
+     * Svaret caches kort (se TicketTypeCache), fordi det hentes ved hvert besøg på bestillingssiden.
+     */
     @GetMapping("/ticket-types/current")
     public List<TicketTypeResponse> currentTicketTypes() {
+        return ticketTypeCache.get(this::loadCurrentTicketTypes);
+    }
+
+    private List<TicketTypeResponse> loadCurrentTicketTypes() {
         List<TicketType> types = ticketService.findCurrentTicketTypes();
         // Ledige pladser regnes én gang pr. event, ikke én gang pr. billettype
         Map<Integer, Long> seatsLeft = new HashMap<>();

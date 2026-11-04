@@ -28,13 +28,15 @@ public class UnpaidOrderExpiryJob {
     private final CustomerOrderRepository orderRepository;
     private final PaymentSettingsService paymentSettingsService;
     private final Clock clock;
+    private final TicketTypeCache ticketTypeCache;
 
     public UnpaidOrderExpiryJob(CustomerOrderRepository orderRepository,
                                 PaymentSettingsService paymentSettingsService,
-                                Clock clock) {
+                                Clock clock, TicketTypeCache ticketTypeCache) {
         this.orderRepository = orderRepository;
         this.paymentSettingsService = paymentSettingsService;
         this.clock = clock;
+        this.ticketTypeCache = ticketTypeCache;
     }
 
     /** Kører hver hele time (sekund 0, minut 0). Returnerer antallet af annullerede bestillinger. */
@@ -52,6 +54,7 @@ public class UnpaidOrderExpiryJob {
             }
         }
         if (cancelled > 0) {
+            ticketTypeCache.evict(); // pladserne er frigivet
             log.info("Annullerede {} ubetalte bestilling(er) med overskredet betalingsfrist", cancelled);
         }
         return cancelled;
