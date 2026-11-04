@@ -10,7 +10,7 @@
     <script src="js/bestilling.js" defer></script>
 </head>
 <body>
-<main class="page">
+<main class="page checkout-page">
 
     <header class="page-header">
         <p class="eyebrow">Billetbestilling</p>
@@ -22,98 +22,122 @@
     <p id="loading" class="status">Henter billetter …</p>
 
     <!-- Vises, hvis der ingen billetter er, eller serveren ikke svarer -->
-    <section id="unavailable" class="card notice" hidden>
+    <section id="unavailable" class="card notice checkout-narrow" hidden>
         <h2>Ingen billetter lige nu</h2>
         <p id="unavailable-text">Der er ingen billetter til salg i øjeblikket. Kig forbi igen senere.</p>
     </section>
 
-    <!-- Selve bestillingen -->
-    <form id="order-form" hidden>
+    <!-- Selve bestillingen: formularen til venstre, oversigten til højre (på mobil under hinanden) -->
+    <form id="order-form" class="checkout" hidden>
 
-        <!-- Vises kun, når flere events har billetter til salg på samme tid -->
-        <section id="event-section" class="card" hidden>
-            <h2>Vælg event</h2>
-            <div id="event-choices" class="event-choices" role="radiogroup" aria-label="Event"></div>
-        </section>
+        <div class="card checkout-main">
+            <nav class="steps" aria-label="Trin">
+                <span aria-current="step">Bestilling</span>
+                <span class="steps-sep" aria-hidden="true">›</span>
+                <span>Betaling</span>
+            </nav>
 
-        <section class="card">
-            <h2>Billetpriser</h2>
-            <p id="seats-left" class="seats-left" hidden></p>
-            <ul id="price-list" class="price-list"></ul>
-        </section>
+            <!-- Vises kun, når flere events har billetter til salg på samme tid -->
+            <section id="event-section" class="checkout-section" hidden>
+                <h2>Vælg event</h2>
+                <div id="event-choices" class="event-choices" role="radiogroup" aria-label="Event"></div>
+            </section>
 
-        <!-- Eventets praktiske info, fx gæstebilletter og åbningstider. Udfyldes af bestilling.js -->
-        <section id="event-info" class="card" hidden>
-            <h2>Godt at vide</h2>
-            <p id="event-info-text" class="event-info-text"></p>
-        </section>
+            <section class="checkout-section">
+                <h2>Deltagere</h2>
+                <p class="hint">Én billet pr. deltager. Skriv det fulde navn, som det skal stå på deltagerlisten (ikke kælenavne).
+                    Deltagere på samme bestilling sidder sammen.</p>
 
-        <section class="card">
-            <h2>Deltagere</h2>
-            <p class="hint">Én billet pr. deltager. Skriv det fulde navn, som det skal stå på deltagerlisten (ikke kælenavne).
-                Deltagere på samme bestilling sidder sammen.</p>
+                <ol id="participants" class="participants"></ol>
 
-            <ol id="participants" class="participants"></ol>
+                <button type="button" id="add-participant" class="button secondary">+ Tilføj deltager</button>
+            </section>
 
-            <button type="button" id="add-participant" class="button secondary">+ Tilføj deltager</button>
-        </section>
+            <section class="checkout-section">
+                <h2>Kontaktoplysninger</h2>
+                <p class="hint">Så vi kan kontakte dig om bestillingen.</p>
 
-        <section class="card">
-            <h2>Pladsreservation <span class="optional">(valgfri)</span></h2>
-            <p class="hint">Vil I sidde sammen med nogen, der har købt billet for sig selv? Skriv deres fulde navne,
-                ét pr. linje. Kun én i gruppen behøver at skrive det.</p>
-            <div class="field">
-                <label for="seatWith">Vi vil gerne sidde sammen med</label>
-                <textarea id="seatWith" name="seatWith" rows="3" maxlength="2000" placeholder="fx Bente Berg&#10;Camilla Carlsen"></textarea>
-                <p class="field-error" data-error-for="seatWith"></p>
-            </div>
-            <p class="hint">Vi prøver at opfylde alles ønsker. Der er et begynder-/singlebord, som du kan vælge ved hver deltager.
-                Bordender er der få af, så dem kan vi kun give til dem, der har brug for det af helbredsmæssige årsager, fx hvis man har rollator med.</p>
-        </section>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="contactName">Navn</label>
+                        <input id="contactName" name="contactName" autocomplete="name" maxlength="150" required>
+                        <p class="field-error" data-error-for="contactName"></p>
+                    </div>
+                    <div class="field">
+                        <label for="email">E-mail</label>
+                        <input id="email" name="email" type="email" autocomplete="email" maxlength="255" required>
+                        <p class="field-error" data-error-for="email"></p>
+                    </div>
+                </div>
 
-        <section class="card">
-            <h2>Kontaktoplysninger</h2>
-            <p class="hint">Så vi kan kontakte dig om bestillingen.</p>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="phone">Telefon <span class="optional">(valgfri)</span></label>
+                        <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30">
+                        <p class="field-error" data-error-for="phone"></p>
+                    </div>
+                    <div class="field" aria-hidden="true"></div>
+                </div>
 
-            <div class="field">
-                <label for="contactName">Navn</label>
-                <input id="contactName" name="contactName" autocomplete="name" maxlength="150" required>
-                <p class="field-error" data-error-for="contactName"></p>
-            </div>
+                <div class="field">
+                    <label for="note">Besked til arrangørerne <span class="optional">(valgfri)</span></label>
+                    <textarea id="note" name="note" rows="3" maxlength="1000"></textarea>
+                </div>
+            </section>
 
-            <div class="field">
-                <label for="email">E-mail</label>
-                <input id="email" name="email" type="email" autocomplete="email" maxlength="255" required>
-                <p class="field-error" data-error-for="email"></p>
-            </div>
+            <section class="checkout-section">
+                <h2>Pladsreservation <span class="optional">(valgfri)</span></h2>
+                <p class="hint">Vil I sidde sammen med nogen, der har købt billet for sig selv? Skriv deres fulde navne,
+                    ét pr. linje. Kun én i gruppen behøver at skrive det.</p>
+                <div class="field">
+                    <label for="seatWith">Vi vil gerne sidde sammen med</label>
+                    <textarea id="seatWith" name="seatWith" rows="3" maxlength="2000" placeholder="fx Bente Berg&#10;Camilla Carlsen"></textarea>
+                    <p class="field-error" data-error-for="seatWith"></p>
+                </div>
+                <p class="hint">Vi prøver at opfylde alles ønsker. Der er et begynder-/singlebord, som du kan vælge ved hver deltager.
+                    Bordender er der få af, så dem kan vi kun give til dem, der har brug for det af helbredsmæssige årsager, fx hvis man har rollator med.</p>
+            </section>
+        </div>
 
-            <div class="field">
-                <label for="phone">Telefon <span class="optional">(valgfri)</span></label>
-                <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30">
-                <p class="field-error" data-error-for="phone"></p>
-            </div>
+        <!-- Oversigten følger med ned, når man scroller (på store skærme) -->
+        <aside class="checkout-summary" aria-label="Din bestilling">
+            <section class="card summary-card">
+                <h2>Din bestilling</h2>
+                <p class="summary-event">
+                    <strong id="summary-event-name"></strong>
+                    <small id="summary-event-dates" class="muted"></small>
+                </p>
+                <p id="seats-left" class="seats-left" hidden></p>
 
-            <div class="field">
-                <label for="note">Besked til arrangørerne <span class="optional">(valgfri)</span></label>
-                <textarea id="note" name="note" rows="3" maxlength="1000"></textarea>
-            </div>
-        </section>
+                <!-- Én linje pr. billettype, fx "2 × Standard". Udfyldes af bestilling.js -->
+                <ul id="summary-lines" class="summary-lines"></ul>
 
-        <section class="card summary">
-            <div class="total-row">
-                <span>I alt</span>
-                <strong id="total" aria-live="polite">0,00 kr.</strong>
-            </div>
-            <p class="hint">Den endelige pris beregnes, når du bestiller.</p>
+                <div class="total-row">
+                    <span>I alt</span>
+                    <strong id="total" aria-live="polite">0,00 kr.</strong>
+                </div>
+                <p class="hint">Den endelige pris beregnes, når du bestiller. Du får betalingsoplysningerne lige bagefter.</p>
 
-            <p id="form-error" class="form-error" role="alert" hidden></p>
+                <p id="form-error" class="form-error" role="alert" hidden></p>
 
-            <button type="submit" id="submit" class="button primary">Bestil billetter</button>
-        </section>
+                <button type="submit" id="submit" class="button primary">Bestil billetter</button>
+            </section>
+
+            <!-- Eventets praktiske info, fx gæstebilletter og åbningstider. Udfyldes af bestilling.js -->
+            <section id="event-info" class="card" hidden>
+                <h2>Godt at vide</h2>
+                <p id="event-info-text" class="event-info-text"></p>
+            </section>
+        </aside>
     </form>
 
     <!-- Vises, når bestillingen er oprettet -->
-    <section id="confirmation" class="card confirmation" hidden tabindex="-1">
+    <section id="confirmation" class="card confirmation checkout-narrow" hidden tabindex="-1">
+        <nav class="steps" aria-label="Trin">
+            <span>Bestilling</span>
+            <span class="steps-sep" aria-hidden="true">›</span>
+            <span aria-current="step">Betaling</span>
+        </nav>
         <h2>Tak for din bestilling!</h2>
         <p>Bestillingsnummer: <strong id="confirm-id"></strong></p>
         <p>Beløb: <strong id="confirm-total"></strong></p>

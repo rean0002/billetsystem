@@ -218,48 +218,6 @@ a {
 }
 
 /* ---------------------------------------------------------------------
- * Billetpriser
- * ------------------------------------------------------------------- */
-
-.price-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.price-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 16px;
-    padding: 12px 0;
-    border-top: 1px solid var(--line-soft);
-}
-
-.price-list li:first-child {
-    border-top: none;
-    padding-top: 4px;
-}
-
-.price-list .tag-name {
-    font-weight: 600;
-}
-
-.price-list strong {
-    font-family: var(--font-display);
-    font-size: 1.15rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.price-list small {
-    display: block;
-    color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: 400;
-}
-
-/* ---------------------------------------------------------------------
  * Formularer
  * ------------------------------------------------------------------- */
 
@@ -634,7 +592,8 @@ a.notice-warn:hover {
 
 .event-choices {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
 }
 
 .event-choice {
@@ -1586,4 +1545,133 @@ a.notice-warn:hover {
 .clerk-sign-in {
     display: flex;
     justify-content: center;
+}
+
+
+/* ---------------------------------------------------------------------
+ * Bestillingssiden som checkout: formular til venstre, oversigt til højre
+ * ------------------------------------------------------------------- */
+
+.page.checkout-page {
+    max-width: 1080px;
+}
+
+.checkout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    align-items: start;
+}
+
+.checkout-main {
+    padding: 28px;
+}
+
+/* Sektionerne i formularen adskilles af en tynd streg i stedet for hver sit kort */
+.checkout-section + .checkout-section {
+    border-top: 1px solid var(--line-soft);
+    margin-top: 28px;
+    padding-top: 28px;
+}
+
+/* Første synlige sektion skal ikke have streg over sig (fx når "Vælg event" er skjult) */
+.steps + .checkout-section[hidden] + .checkout-section {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+/* Trinvisning: Bestilling › Betaling */
+.steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 22px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.steps [aria-current="step"] {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.steps-sep {
+    color: var(--line);
+}
+
+/* Oversigten følger med, når man scroller */
+.checkout-summary {
+    position: sticky;
+    top: 24px;
+}
+
+.summary-card h2 {
+    margin-bottom: 12px;
+}
+
+.summary-event {
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 12px;
+}
+
+.summary-lines {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    border-top: 1px solid var(--line-soft);
+}
+
+.summary-lines li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.summary-lines span {
+    font-weight: 600;
+}
+
+.summary-lines small {
+    display: block;
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.summary-lines strong {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.summary-card .total-row {
+    margin-bottom: 4px;
+}
+
+.summary-card .hint {
+    margin-bottom: 16px;
+}
+
+/* Smalle elementer (ingen billetter, bekræftelse) står i midten */
+.checkout-narrow {
+    max-width: 640px;
+}
+
+/* Tablet og mobil: alt under hinanden, oversigten med knappen til sidst */
+@media (max-width: 880px) {
+    .checkout {
+        grid-template-columns: 1fr;
+    }
+
+    .checkout-summary {
+        position: static;
+    }
+
+    .checkout-main {
+        padding: 22px;
+    }
 }

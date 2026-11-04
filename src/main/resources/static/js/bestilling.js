@@ -123,6 +123,8 @@ function selectEvent(id) {
 
     el("event-name").textContent = selectedEvent.name;
     el("event-dates").textContent = eventDates(selectedEvent);
+    el("summary-event-name").textContent = selectedEvent.name;
+    el("summary-event-dates").textContent = eventDates(selectedEvent);
     document.title = "Bestil billetter: " + selectedEvent.name;
 
     // Vis kun "pladser tilbage", når der er få, så det ikke virker presset hele tiden
@@ -134,7 +136,6 @@ function selectEvent(id) {
     el("event-info").hidden = !selectedEvent.publicInfo;
     el("event-info-text").textContent = selectedEvent.publicInfo ?? "";
 
-    renderPriceList();
     for (const select of document.querySelectorAll(".participant-type")) {
         fillTypeOptions(select);
     }
@@ -147,29 +148,6 @@ function selectEvent(id) {
 /** Højst 20 pr. bestilling, og aldrig flere end der er ledige pladser. */
 function maxParticipants() {
     return Math.min(MAX_PARTICIPANTS, selectedEvent?.seatsLeft ?? MAX_PARTICIPANTS);
-}
-
-function renderPriceList() {
-    const list = el("price-list");
-    list.replaceChildren();
-    for (const type of ticketTypes) {
-        const li = document.createElement("li");
-
-        const name = document.createElement("span");
-        name.className = "tag-name";
-        name.textContent = type.name;
-        if (type.validTo) {
-            const until = document.createElement("small");
-            until.textContent = "Til og med " + dateFormat.format(new Date(type.validTo));
-            name.append(until);
-        }
-
-        const price = document.createElement("strong");
-        price.textContent = formatPrice(type.priceOre);
-
-        li.append(name, price);
-        list.append(li);
-    }
 }
 
 // ---------------------------------------------------------------------
@@ -224,12 +202,40 @@ function updateParticipants() {
     updateTotal();
 }
 
+/**
+ * Opdaterer oversigten til højre: én linje pr. billettype (fx "2 × Standard") og totalen.
+ * Kaldes, når en deltager tilføjes eller fjernes, eller en billettype ændres.
+ */
 function updateTotal() {
-    let total = 0;
+    // Antal billetter pr. billettype, i den rækkefølge billettyperne står
+    const counts = new Map();
     for (const select of document.querySelectorAll(".participant-type")) {
-        const type = ticketTypes.find((t) => t.id === Number(select.value));
-        if (type) total += type.priceOre;
+        const id = Number(select.value);
+        counts.set(id, (counts.get(id) ?? 0) + 1);
     }
+
+    let total = 0;
+    const lines = [];
+    for (const type of ticketTypes) {
+        const count = counts.get(type.id);
+        if (!count) continue;
+        total += count * type.priceOre;
+
+        const name = document.createElement("span");
+        name.textContent = `${count} × ${type.name}`;
+        const each = document.createElement("small");
+        each.textContent = formatPrice(type.priceOre) + " pr. billet" +
+            (type.validTo ? " · til og med " + dateFormat.format(new Date(type.validTo)) : "");
+        name.append(each);
+
+        const amount = document.createElement("strong");
+        amount.textContent = formatPrice(count * type.priceOre);
+
+        const li = document.createElement("li");
+        li.append(name, amount);
+        lines.push(li);
+    }
+    el("summary-lines").replaceChildren(...lines);
     el("total").textContent = formatPrice(total);
 }
 
