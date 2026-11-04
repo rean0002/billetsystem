@@ -1,5 +1,5 @@
 /*
- * Events: se alle events med salg, opret nye og ret eksisterende.
+ * Events: se alle events med salg, opret nye, ret og slet eksisterende.
  * "Vis" vælger eventet, så overblik, bestillinger, deltagere og billettyper viser det.
  */
 
@@ -37,8 +37,32 @@ function renderEvents() {
             h("td", { className: "num nowrap" },
                 h("button", { type: "button", className: "link-button", onClick: () => showEvent(e.id, "/admin/index.html") }, "Vis"),
                 " ",
-                h("button", { type: "button", className: "link-button", onClick: () => openEventForm(e) }, "Ret")));
+                h("button", { type: "button", className: "link-button", onClick: () => openEventForm(e) }, "Ret"),
+                " ",
+                // Events med aktive bestillinger kan ikke slettes (serveren afviser det også)
+                h("button", {
+                    type: "button",
+                    className: "link-button danger",
+                    disabled: sold > 0,
+                    title: sold > 0 ? "Kan ikke slettes, fordi der er aktive bestillinger. Annullér eller refundér dem først." : "",
+                    onClick: () => deleteEvent(e),
+                }, "Slet")));
     }));
+}
+
+async function deleteEvent(e) {
+    const ok = confirm(`Slet "${e.name}"?\n\nEventet og dets billettyper slettes. Har eventet annullerede eller ` +
+        "refunderede bestillinger, slettes de også. Det kan ikke fortrydes.");
+    if (!ok) return;
+    try {
+        events = await api(`/api/admin/events/${e.id}`, { method: "DELETE" });
+        // Var det slettede event valgt, vælges et andet
+        currentEventId = chooseEvent();
+        renderEvents();
+        renderEventPicker();
+    } catch (err) {
+        showPageError(err.message);
+    }
 }
 
 /** Vælger eventet og går til en side, fx overblikket eller billettyperne. */

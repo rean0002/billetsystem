@@ -45,7 +45,7 @@ I dag bestiller man billet til messen ved at sende en mail, får et kontonummer 
 - **Pladsreservation:** ved hver deltager kan man vælge begynder-/singlebordet eller bede om en bordende af helbredsmæssige årsager (kun ja/nej, årsagen gemmes ikke). Deltagere på samme bestilling sidder sammen, og en gruppe kan skrive fulde navne på andre med egen billet, de vil sidde med
 - **Borde (admin):** grupper med de navne, de vil sidde med, slået op blandt deltagerne (navne uden billet markeres), samt lister over begynder-/singlebordet og bordender. Kan printes. Ønskerne står også på deltagerlisten, i bestillingen og i CSV-filen
 - **Praktisk info pr. event**, fx gæstebilletter og åbningstider, vises under "Godt at vide" på bestillingssiden
-- **Events:** opret og ret events (navn, datoer, max antal deltagere). En vælger i menuen bestemmer, hvilket event overblik, bestillinger, deltagere og billettyper viser. Uden valg vises det næste kommende event
+- **Events:** opret, ret og slet events (navn, datoer, max antal deltagere). Et event med aktive bestillinger (afventer betaling eller betalt) kan ikke slettes. Annullerede og refunderede bestillinger slettes med eventet. En vælger i menuen bestemmer, hvilket event overblik, bestillinger, deltagere og billettyper viser. Uden valg vises det næste kommende event
 
 ## Datamodel
 
@@ -254,7 +254,7 @@ Er input ugyldigt, svarer serveren med `400` og en forklaring, fx `{"fejl": "Ugy
 | `GET /api/admin/payment-settings`, `PUT /api/admin/payment-settings` | Hent eller gem betalingsoplysninger |
 | `GET /api/admin/seating?eventId=` | Grupper, begynder-/singlebord og bordender |
 | `GET /api/admin/events` | Alle events med salgstal |
-| `POST /api/admin/events`, `PUT /api/admin/events/{id}` | Opret eller ret et event |
+| `POST /api/admin/events`, `PUT /api/admin/events/{id}`, `DELETE /api/admin/events/{id}` | Opret, ret eller slet et event |
 | `GET /api/admin/overview` | Alle tal til overblikket |
 | `GET /api/admin/orders?status=&search=` | Bestillinger, nyeste først |
 | `GET /api/admin/orders/{id}` | Én bestilling med deltagere |

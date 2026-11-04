@@ -25,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -114,6 +115,13 @@ public class AdminController {
     @PutMapping("/api/admin/events/{id}")
     public List<AdminEventResponse> updateEvent(@PathVariable int id, @Valid @RequestBody EventRequest request) {
         eventService.update(id, request);
+        return statisticsService.eventsWithSales();
+    }
+
+    /** DELETE /api/admin/events/2: sletter eventet (afvises, hvis det har aktive bestillinger). Svarer med den nye liste. */
+    @DeleteMapping("/api/admin/events/{id}")
+    public List<AdminEventResponse> deleteEvent(@PathVariable int id) {
+        eventService.delete(id);
         return statisticsService.eventsWithSales();
     }
 

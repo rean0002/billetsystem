@@ -530,6 +530,17 @@ textarea:focus {
     text-decoration: underline;
 }
 
+.link-button.danger {
+    color: var(--error);
+}
+
+.link-button:disabled {
+    color: var(--muted);
+    opacity: 0.6;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
 .small-link {
     font-size: 0.9rem;
     font-weight: 700;

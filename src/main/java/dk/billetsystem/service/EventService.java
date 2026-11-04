@@ -1,10 +1,15 @@
 package dk.billetsystem.service;
 
 import dk.billetsystem.dto.EventRequest;
+import dk.billetsystem.model.CustomerOrder;
 import dk.billetsystem.model.Event;
 import dk.billetsystem.model.OrderStatus;
+import dk.billetsystem.repository.CustomerOrderRepository;
 import dk.billetsystem.repository.EventRepository;
 import dk.billetsystem.repository.ParticipantRepository;
+import dk.billetsystem.repository.TicketTypeRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,12 +29,19 @@ public class EventService {
     /** Bestillinger med disse statusser optager en plads. Annullerede og refunderede gør ikke. */
     public static final EnumSet<OrderStatus> TAKES_A_SEAT = EnumSet.of(OrderStatus.PAID, OrderStatus.PENDING);
 
+    private static final Logger log = LoggerFactory.getLogger(EventService.class);
+
     private final EventRepository eventRepository;
     private final ParticipantRepository participantRepository;
+    private final CustomerOrderRepository orderRepository;
+    private final TicketTypeRepository ticketTypeRepository;
 
-    public EventService(EventRepository eventRepository, ParticipantRepository participantRepository) {
+    public EventService(EventRepository eventRepository, ParticipantRepository participantRepository,
+                        CustomerOrderRepository orderRepository, TicketTypeRepository ticketTypeRepository) {
         this.eventRepository = eventRepository;
         this.participantRepository = participantRepository;
+        this.orderRepository = orderRepository;
+        this.ticketTypeRepository = ticketTypeRepository;
     }
 
     public List<Event> findAll() {
@@ -105,6 +117,37 @@ public class EventService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /**
+     * Sletter et event med dets billettyper.
+     *
+     * Har eventet bestillinger, der afventer betaling eller er betalt, afvises det med 400, så rigtige
+     * kunders bestillinger aldrig slettes ved en fejl. Annullerede og refunderede bestillinger slettes med.
+     */
+    @Transactional
+    public void delete(int id) {
+        // Lås eventet, så der ikke kan komme en ny bestilling ind, mens det slettes
+        Event event = eventRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event " + id + " findes ikke"));
+
+        List<CustomerOrder> orders = orderRepository.findByEventId(id);
+        long active = orders.stream().filter(o -> TAKES_A_SEAT.contains(o.getStatus())).count();
+        if (active > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, event.getName() + " har " + active + " "
+                    + (active == 1 ? "aktiv bestilling" : "aktive bestillinger")
+                    + " (afventer betaling eller betalt). Annullér eller refundér dem først.");
+        }
+
+        // Rækkefølgen betyder noget: bestillinger (og deres deltagere) peger på billettyperne,
+        // og billettyperne peger på eventet.
+        if (!orders.isEmpty()) {
+            orderRepository.deletePaymentsForOrders(orders.stream().map(CustomerOrder::getId).toList());
+            orderRepository.deleteAll(orders);
+        }
+        ticketTypeRepository.deleteAll(ticketTypeRepository.findByEventIdOrderByValidFrom(id));
+        eventRepository.delete(event);
+        log.info("Slettede eventet '{}' med {} annullerede/refunderede bestilling(er)", event.getName(), orders.size());
     }
 
     // Samme regel som CHECK (end_date >= start_date) i databasen, men med en læsbar fejlbesked
